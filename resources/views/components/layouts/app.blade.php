@@ -20,11 +20,14 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ isset($title) ? $title.' · ' : '' }}{{ \App\Models\Setting::get('company.name') }} Office</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <script>
         try {
             const t = localStorage.getItem('nr-theme');
             if (t === 'dark' || (!t && matchMedia('(prefers-color-scheme: dark)').matches)) document.documentElement.classList.add('dark');
+            // Apply the remembered sidebar width before first paint so pages don't shift on load.
+            if (localStorage.getItem('nr-sidebar') === '1') document.documentElement.classList.add('sb-collapsed');
         } catch (e) {}
     </script>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
@@ -34,11 +37,10 @@
 
     {{-- Sidebar --}}
     <div x-cloak x-show="$store.sidebar.mobileOpen" x-transition.opacity class="fixed inset-0 z-40 bg-gray-900/30 lg:hidden" @click="$store.sidebar.mobileOpen = false"></div>
-    <aside :class="[$store.sidebar.collapsed ? 'lg:w-[68px]' : 'lg:w-[236px]', $store.sidebar.mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0']"
-           class="no-print fixed inset-y-0 left-0 z-50 w-64 lg:w-[236px] flex flex-col bg-side border-r border-line transition-all duration-200">
+    <aside :class="$store.sidebar.mobileOpen && 'is-open'" class="app-sidebar no-print fixed inset-y-0 left-0 z-50 flex flex-col bg-side border-r border-line">
         <div class="flex items-center gap-2.5 h-14 px-4 border-b border-line">
             <span class="grid place-items-center size-[30px] rounded-lg bg-accent text-on-accent font-bold text-[12px] tracking-[.02em] shrink-0">NR</span>
-            <div class="min-w-0" x-show="!$store.sidebar.collapsed || $store.sidebar.mobileOpen">
+            <div class="sb-label min-w-0">
                 <div class="text-[14px] font-semibold leading-tight truncate">{{ \App\Models\Setting::get('company.name') }}</div>
                 <div class="text-[12px] text-muted leading-tight">Office</div>
             </div>
@@ -47,32 +49,32 @@
             @foreach ($nav as [$label, $route, $icon, $patterns, $badge, $tone])
                 <a href="{{ route($route) }}" @class(['nav-link', 'nav-active' => request()->routeIs(...$patterns)]) title="{{ $label }}">
                     <x-icon :name="$icon" />
-                    <span x-show="!$store.sidebar.collapsed || $store.sidebar.mobileOpen" class="flex-1 truncate">{{ $label }}</span>
+                    <span class="sb-label flex-1 truncate">{{ $label }}</span>
                     @if ($badge > 0)
-                        <span x-show="!$store.sidebar.collapsed || $store.sidebar.mobileOpen" class="count bg-{{ $tone }}-bg text-{{ $tone }}-fg">{{ $badge }}</span>
-                        <span x-cloak x-show="$store.sidebar.collapsed && !$store.sidebar.mobileOpen" class="absolute top-1.5 right-2 size-2 rounded-full bg-{{ $tone }}-fg"></span>
+                        <span class="sb-label count bg-{{ $tone }}-bg text-{{ $tone }}-fg">{{ $badge }}</span>
+                        <span class="sb-dot absolute top-1.5 right-2 size-2 rounded-full bg-{{ $tone }}-fg"></span>
                     @endif
                 </a>
             @endforeach
             @if ($user->hasRole('admin', 'manager'))
                 <a href="{{ route('settings.index') }}" @class(['nav-link', 'nav-active' => request()->routeIs('settings.*')]) title="Settings">
-                    <x-icon name="settings" /><span x-show="!$store.sidebar.collapsed || $store.sidebar.mobileOpen">Settings</span>
+                    <x-icon name="settings" /><span class="sb-label">Settings</span>
                 </a>
             @endif
         </nav>
         <div class="px-2.5 py-2.5 border-t border-line">
-            <button class="hidden lg:flex nav-link w-full" @click="$store.sidebar.toggle()" title="Collapse sidebar">
-                <x-icon name="panel-left-close" x-show="!$store.sidebar.collapsed" />
-                <x-icon name="panel-left-open" x-cloak x-show="$store.sidebar.collapsed" />
-                <span x-show="!$store.sidebar.collapsed">Collapse</span>
+            <button type="button" class="hidden lg:flex nav-link w-full" @click="$store.sidebar.toggle()" title="Collapse sidebar">
+                <x-icon name="panel-left-close" class="sb-label" />
+                <x-icon name="panel-left-open" class="sb-dot" />
+                <span class="sb-label">Collapse</span>
             </button>
-            <div class="flex items-center gap-2.5 px-1.5 pt-2">
+            <div class="sb-user flex items-center gap-2.5 px-1.5 pt-2">
                 <x-avatar :name="$user->name" size="size-[30px] text-[11.5px]" />
-                <div class="min-w-0 flex-1" x-show="!$store.sidebar.collapsed || $store.sidebar.mobileOpen">
+                <div class="sb-label min-w-0 flex-1">
                     <div class="text-[13px] font-medium truncate">{{ $user->name }}</div>
                     <div class="text-[11.5px] text-muted">{{ \App\Models\User::ROLES[$user->role] ?? $user->role }}</div>
                 </div>
-                <form method="POST" action="{{ route('logout') }}" x-show="!$store.sidebar.collapsed || $store.sidebar.mobileOpen">
+                <form method="POST" action="{{ route('logout') }}" class="sb-label">
                     @csrf
                     <button class="btn btn-icon !size-7 !w-7" title="Sign out"><x-icon name="log-out" class="!size-4" /></button>
                 </form>
@@ -80,7 +82,7 @@
         </div>
     </aside>
 
-    <div :class="$store.sidebar.collapsed ? 'lg:pl-[68px]' : 'lg:pl-[236px]'" class="flex-1 min-w-0 flex flex-col transition-all duration-200">
+    <div class="app-main flex-1 min-w-0 flex flex-col">
 
         {{-- Top bar --}}
         <header class="no-print sticky top-0 z-30 h-14 flex items-center gap-3 px-4 lg:px-5 bg-surface border-b border-line">

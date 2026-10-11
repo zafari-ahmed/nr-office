@@ -23,7 +23,11 @@ Alpine.store('sidebar', {
     mobileOpen: false,
     toggle() {
         this.collapsed = !this.collapsed;
+        const root = document.documentElement;
+        root.classList.add('sb-anim');
+        root.classList.toggle('sb-collapsed', this.collapsed);
         try { localStorage.setItem('nr-sidebar', this.collapsed ? '1' : '0'); } catch (e) {}
+        setTimeout(() => { root.classList.remove('sb-anim'); renderCharts(); }, 220);
     },
 });
 

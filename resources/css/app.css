@@ -196,6 +196,28 @@
     .link { @apply text-accent hover:underline; }
 }
 
+/*
+ * Sidebar: width comes from a class on <html> set before first paint (see layout head),
+ * so navigating never animates or shifts. Transitions run only after a click on Collapse.
+ */
+.app-sidebar { width: 16rem; transform: translateX(-100%); }
+.app-sidebar.is-open { transform: none; }
+.sb-dot { display: none; }
+@media (min-width: 64rem) {
+    .app-sidebar { width: 236px; transform: none; }
+    .app-main { padding-left: 236px; }
+    .sb-collapsed .app-sidebar { width: 68px; }
+    .sb-collapsed .app-main { padding-left: 68px; }
+    .sb-collapsed .app-sidebar .sb-label { display: none; }
+    .sb-collapsed .app-sidebar .sb-dot { display: block; }
+    .sb-collapsed .app-sidebar .nav-link { justify-content: center; padding: 0; }
+    .sb-collapsed .app-sidebar .sb-user { justify-content: center; padding-left: 0; padding-right: 0; }
+    .sb-anim .app-sidebar, .sb-anim .app-main { transition: width .18s ease, padding-left .18s ease; }
+}
+@media (max-width: 63.98rem) {
+    .app-sidebar { transition: transform .2s ease; }
+}
+
 @media print {
     .no-print { display: none !important; }
     body { background: white; }

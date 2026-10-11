@@ -3,8 +3,9 @@
     "private": true,
     "type": "module",
     "scripts": {
-        "build": "vite build",
-        "dev": "vite"
+        "build": "node scripts/export-icons.mjs && vite build",
+        "dev": "vite",
+        "icons": "node scripts/export-icons.mjs"
     },
     "devDependencies": {
         "@tailwindcss/vite": "^4.0.0",

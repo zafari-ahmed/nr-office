@@ -23,6 +23,8 @@ php artisan serve
 Sign in with `admin@nrassociates.pk` / `password` (change it under Settings → Users & roles).
 Other sample logins: `kamran@nrassociates.pk` (manager), `accounts@nrassociates.pk` (accounts), `ahmed@nrassociates.pk` (staff).
 
+Icons are rendered on the server from `resources/icons/lucide.php`. `npm run build` regenerates it; run `npm run icons` after using a new icon name in a view.
+
 For a clean production database without sample data, run `php artisan migrate --seeder=SettingsSeeder`
 and create the first admin with `php artisan tinker`.
 

@@ -70,3 +70,14 @@ if (! function_exists('activity_style')) {
         };
     }
 }
+
+if (! function_exists('lucide_svg')) {
+    /** Inner SVG markup for a Lucide icon from resources/icons/lucide.php (built by `npm run icons`), or null. */
+    function lucide_svg(string $name): ?string
+    {
+        static $icons = null;
+        $icons ??= is_file($path = resource_path('icons/lucide.php')) ? require $path : [];
+
+        return $icons[$name] ?? null;
+    }
+}
