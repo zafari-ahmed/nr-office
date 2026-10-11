@@ -33,7 +33,7 @@
         </div>
     </div>
 
-    <div class="grid lg:grid-cols-[1fr_280px] gap-6">
+    <div class="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-6">
         @include('partials.doc-preview', ['doc' => $quotation, 'kind' => 'Quotation'])
         <aside class="space-y-4">
             <div class="card card-pad text-[13px] space-y-2">

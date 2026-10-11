@@ -1,8 +1,9 @@
 /**
  * Quotation / invoice editor: line items, discount, tax and live totals.
  */
-export function lineItems(initial) {
-    return {
+export function lineItems(initial, extra = {}) {
+    // Extra state is assigned onto the object (not spread) so the total getters stay live.
+    return Object.assign({
         items: initial.items.length ? initial.items : [{ description: '', quantity: 1, unit: '', rate: 0 }],
         discountType: initial.discountType || 'amount',
         discountValue: Number(initial.discountValue || 0),
@@ -22,5 +23,5 @@ export function lineItems(initial) {
         get total() { return this.subtotal - this.discount + this.tax; },
         fmt(n) { return this.currency + ' ' + Number(n || 0).toLocaleString('en-PK', { maximumFractionDigits: 2 }); },
         num(n) { return Number(n || 0).toLocaleString('en-PK', { maximumFractionDigits: 2 }); },
-    };
+    }, extra);
 }

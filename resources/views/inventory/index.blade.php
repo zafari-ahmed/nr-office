@@ -1,26 +1,24 @@
 <x-layouts.app title="Inventory">
-    <x-page-header title="Inventory" subtitle="Office assets and consumables, who has what, and what's running low.">
+    <x-page-header title="Inventory" subtitle="Equipment, IT and office stock · click any item for its history">
         <x-slot:actions>
             <button class="btn btn-primary" @click="$store.drawer.open('item')"><x-icon name="plus" /> Add item</button>
         </x-slot:actions>
     </x-page-header>
 
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <x-stat label="Assets" :value="$counts['asset']" icon="laptop" :href="route('inventory.index', ['tab' => 'asset'])" />
-        <x-stat label="Consumables" :value="$counts['consumable']" icon="boxes" :href="route('inventory.index', ['tab' => 'consumable'])" />
-        <x-stat label="Low stock" :value="$counts['low']" icon="alert-triangle" :href="route('inventory.index', ['tab' => 'consumable', 'low' => 1])" hint="at or below reorder level" />
-        <x-stat label="Stock value" :value="'PKR '.money_short($counts['value'])" icon="circle-dollar-sign" />
-    </div>
-
-    <div class="flex flex-wrap items-end justify-between gap-3 mb-4">
+    <div class="flex flex-wrap items-end justify-between gap-3 mb-4 border-b border-line">
         <nav class="tabs border-0">
-            <a href="{{ route('inventory.index', ['tab' => 'asset']) }}" @class(['tab', 'tab-active' => $tab === 'asset'])>Assets</a>
-            <a href="{{ route('inventory.index', ['tab' => 'consumable']) }}" @class(['tab', 'tab-active' => $tab === 'consumable'])>Consumables</a>
+            <a href="{{ route('inventory.index', ['tab' => 'asset']) }}" @class(['tab', 'tab-active' => $tab === 'asset'])>Assets <span class="count bg-bg2 text-muted !h-[18px] !text-[11px] font-mono font-medium">{{ $counts['asset'] }}</span></a>
+            <a href="{{ route('inventory.index', ['tab' => 'consumable']) }}" @class(['tab', 'tab-active' => $tab === 'consumable'])>Consumables <span class="count bg-bg2 text-muted !h-[18px] !text-[11px] font-mono font-medium">{{ $counts['consumable'] }}</span>
+                @if ($counts['low'])<span class="count bg-red-bg text-red-fg !h-[18px] !text-[11px]">{{ $counts['low'] }} low</span>@endif
+            </a>
         </nav>
-        <form class="flex gap-2">
+        <form class="flex gap-2 pb-2">
             <input type="hidden" name="tab" value="{{ $tab }}">
-            <input name="q" value="{{ request('q') }}" placeholder="Search name or tag" class="input !h-9 !w-56">
-            <select name="category" class="input !h-9 !w-44" onchange="this.form.submit()">
+            <div class="relative">
+                <x-icon name="search" class="absolute left-3 top-1/2 -translate-y-1/2 text-muted size-4" />
+                <input name="q" value="{{ request('q') }}" placeholder="Search name or tag" class="input !h-[30px] !w-52 pl-9 !text-[12.5px]">
+            </div>
+            <select name="category" class="input !h-[30px] !w-40 !text-[12.5px]" onchange="this.form.submit()">
                 <option value="">All categories</option>
                 @foreach ($categories->where('type', $tab) as $c)<option value="{{ $c->id }}" @selected((string) request('category') === (string) $c->id)>{{ $c->name }}</option>@endforeach
             </select>
@@ -31,15 +29,16 @@
         <div class="overflow-x-auto">
             <table class="table">
                 @if ($tab === 'asset')
-                    <thead><tr><th>Asset</th><th>Category</th><th>Assigned to</th><th>Location</th><th>Condition</th><th class="text-right">Value</th></tr></thead>
+                    <thead><tr><th>Asset</th><th>Category</th><th>Assigned to</th><th>Condition</th><th>Status</th><th class="text-right">Value</th></tr></thead>
                     <tbody>
                     @forelse ($items as $item)
                         <tr class="cursor-pointer" onclick="location='{{ route('inventory.show', $item) }}'">
-                            <td><div class="font-medium">{{ $item->name }}</div><div class="text-xs text-muted">{{ $item->asset_tag }}</div></td>
-                            <td>{{ $item->category?->name ?? '—' }}</td>
-                            <td>@if ($item->assignee)<span class="inline-flex items-center gap-2"><x-avatar :name="$item->assignee->full_name" size="size-6 text-[10px]" />{{ $item->assignee->full_name }}</span>@else<span class="text-muted">In office</span>@endif</td>
-                            <td>{{ $item->location ?? '—' }}</td>
-                            <td><x-pill :status="$item->condition" /></td>
+                            @php $state = $item->assignee ? ['blue', 'Assigned'] : ($item->condition === 'damaged' ? ['amber', 'In repair'] : ($item->condition === 'disposed' ? ['gray', 'Disposed'] : ['green', 'In store'])); @endphp
+                            <td><div class="font-medium">{{ $item->name }}</div><div class="font-mono text-[11.5px] text-muted mt-0.5">{{ $item->asset_tag }}</div></td>
+                            <td class="text-ink-2">{{ $item->category?->name ?? '—' }}</td>
+                            <td>@if ($item->assignee)<span class="inline-flex items-center gap-2"><x-avatar :name="$item->assignee->full_name" size="size-6 text-[9.5px]" />{{ $item->assignee->full_name }}</span>@else<span class="text-muted">{{ $item->location ?: 'In store' }}</span>@endif</td>
+                            <td class="text-ink-2">{{ \App\Models\InventoryItem::CONDITIONS[$item->condition] ?? $item->condition }}</td>
+                            <td><span class="pill pill-{{ $state[0] }}">{{ $state[1] }}</span></td>
                             <td class="text-right tabular-nums">{{ money($item->unit_cost * $item->quantity) }}</td>
                         </tr>
                     @empty
@@ -51,11 +50,11 @@
                     <tbody>
                     @forelse ($items as $item)
                         <tr class="cursor-pointer" onclick="location='{{ route('inventory.show', $item) }}'">
-                            <td><div class="font-medium flex items-center gap-2">{{ $item->name }} @if ($item->isLowStock())<span class="pill pill-amber !h-5">Low</span>@endif</div><div class="text-xs text-muted">{{ $item->location }}</div></td>
+                            <td><div class="font-medium flex items-center gap-2">{{ $item->name }} @if ($item->isLowStock())<span class="pill pill-red">Low</span>@endif</div><div class="text-[12px] text-muted">{{ $item->location }}</div></td>
                             <td>{{ $item->category?->name ?? '—' }}</td>
                             <td>
                                 <div class="flex items-center gap-3">
-                                    <div class="bar flex-1"><span class="{{ $item->isLowStock() ? 'bg-amber-500' : 'bg-accent' }}" style="width: {{ $item->stockPercent() }}%"></span></div>
+                                    <div class="bar flex-1"><span class="{{ $item->isLowStock() ? 'bg-red-fg' : 'bg-accent' }}" style="width: {{ $item->stockPercent() }}%"></span></div>
                                     <span class="tabular-nums text-[13px] whitespace-nowrap">{{ rtrim(rtrim(number_format($item->quantity, 2), '0'), '.') }} {{ $item->unit }}</span>
                                 </div>
                             </td>

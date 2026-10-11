@@ -1,4 +1,4 @@
-<x-layouts.app :title="$invoice->exists ? 'Edit invoice' : 'New invoice'">
+<x-layouts.app full :title="$invoice->exists ? 'Edit invoice' : 'New invoice'">
     @include('partials.doc-editor', [
         'doc' => $invoice, 'kind' => 'Invoice', 'number' => $invoice->invoice_number,
         'items' => $items, 'projects' => $projects,

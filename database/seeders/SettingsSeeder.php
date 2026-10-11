@@ -20,9 +20,9 @@ class SettingsSeeder extends Seeder
         Cache::forget('settings.all');
 
         foreach ([
-            ['Salary', 'salary', 'indigo', 'banknote', 900000],
-            ['Daily office items', 'daily-office-items', 'teal', 'package', 60000],
-            ['Office renovation', 'office-renovation', 'amber', 'building-2', 150000],
+            ['Salary', 'salary', 'teal', 'users', 900000],
+            ['Daily office items', 'daily-office-items', 'amber', 'coffee', 60000],
+            ['Office renovation', 'office-renovation', 'grey', 'hammer', 150000],
         ] as $i => [$name, $slug, $color, $icon, $budget]) {
             ExpenseHead::firstOrCreate(['slug' => $slug], ['name' => $name, 'color' => $color, 'icon' => $icon, 'monthly_budget' => $budget, 'sort_order' => $i]);
         }

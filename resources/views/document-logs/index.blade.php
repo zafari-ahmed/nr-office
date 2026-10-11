@@ -34,7 +34,7 @@
                         </td>
                         <td>{{ $log->project->name }}</td>
                         <td><div>{{ $log->sent_to_name ?: '—' }}</div><div class="text-xs text-muted">{{ $log->sent_to_email }}</div></td>
-                        <td @class(['whitespace-nowrap', 'text-red-600' => $log->next_follow_up_date?->isPast()])>{{ $log->next_follow_up_date?->format('d M Y') ?? '—' }}</td>
+                        <td @class(['whitespace-nowrap', 'text-red-fg' => $log->next_follow_up_date?->isPast()])>{{ $log->next_follow_up_date?->format('d M Y') ?? '—' }}</td>
                         <td><x-pill :status="$log->status" /></td>
                         <td class="text-right tabular-nums">{{ $log->amount ? money($log->amount) : '—' }}</td>
                     </tr>

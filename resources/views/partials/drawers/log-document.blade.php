@@ -6,7 +6,7 @@
         <div class="grid grid-cols-2 gap-4">
             <x-field label="Project" name="project_id" :options="$projects->mapWithKeys(fn ($p) => [$p->id => $p->name.' · '.$p->code])" blank="Choose project…" :value="$project?->id" required class="col-span-2" />
             <div>
-                <label class="label">Type <span class="text-red-500">*</span></label>
+                <label class="label">Type <span class="text-red-fg">*</span></label>
                 <div class="grid grid-cols-2 gap-2" x-data="{ t: '{{ old('document_type', 'quotation') }}' }">
                     @foreach (\App\Models\DocumentLog::TYPES as $value => $label)
                         <label :class="t === '{{ $value }}' ? 'border-accent bg-accent-soft text-accent' : 'border-line'" class="flex items-center justify-center h-10 rounded-lg border text-sm font-medium cursor-pointer">

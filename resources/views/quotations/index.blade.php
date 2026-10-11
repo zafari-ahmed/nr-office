@@ -26,7 +26,7 @@
                         <td>{{ $q->title }}</td>
                         <td><div>{{ $q->project->name }}</div><div class="text-xs text-muted">{{ $q->client?->displayName() }}</div></td>
                         <td class="whitespace-nowrap">{{ $q->issue_date->format('d M Y') }}</td>
-                        <td @class(['whitespace-nowrap', 'text-red-600' => $q->status === 'sent' && $q->valid_until?->isPast()])>{{ $q->valid_until?->format('d M Y') ?? '—' }}</td>
+                        <td @class(['whitespace-nowrap', 'text-red-fg' => $q->status === 'sent' && $q->valid_until?->isPast()])>{{ $q->valid_until?->format('d M Y') ?? '—' }}</td>
                         <td><x-pill :status="$q->status" /></td>
                         <td class="text-right tabular-nums font-medium">{{ money($q->total) }}</td>
                     </tr>

@@ -19,8 +19,8 @@ if (! function_exists('money_short')) {
         $amount = (float) $amount;
 
         return match (true) {
-            abs($amount) >= 10_000_000 => round($amount / 10_000_000, 2).' Cr',
-            abs($amount) >= 100_000 => round($amount / 100_000, 2).' Lac',
+            abs($amount) >= 10_000_000 => round($amount / 10_000_000, 2).'Cr',
+            abs($amount) >= 100_000 => round($amount / 100_000, 2).'L',
             abs($amount) >= 1_000 => round($amount / 1_000, 1).'K',
             default => number_format($amount),
         };
@@ -46,5 +46,27 @@ if (! function_exists('status_label')) {
     function status_label(?string $status): string
     {
         return $status ? ucfirst(str_replace('_', ' ', $status)) : '';
+    }
+}
+
+if (! function_exists('activity_style')) {
+    /** Icon and tone for an activity log action, used by timelines and the dashboard feed. */
+    function activity_style(string $action): array
+    {
+        return match ($action) {
+            'payment_recorded' => ['credit-card', 'green'],
+            'logged' => ['paperclip', 'teal'],
+            'visit_departed', 'visit_scheduled' => ['map-pin', 'blue'],
+            'visit_returned' => ['corner-down-left', 'grey'],
+            'visit_extended' => ['calendar-plus', 'amber'],
+            'follow_up_added' => ['phone', 'amber'],
+            'follow_up_done', 'approved', 'converted' => ['check', 'green'],
+            'files_uploaded' => ['upload', 'grey'],
+            'revised' => ['copy', 'blue'],
+            'status_changed' => ['refresh-cw', 'blue'],
+            'salary_revised' => ['banknote', 'grey'],
+            'created' => ['file-plus', 'blue'],
+            default => ['message-square', 'grey'],
+        };
     }
 }

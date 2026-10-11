@@ -29,6 +29,7 @@ class Setting extends Model
         'rotation.remind_days_before' => '2',
         'rotation.overdue_reminder_every_days' => '1',
         'rotation.notify_roles' => 'admin,manager',
+        'rotation.count_weekends' => '1',
     ];
 
     public static function get(string $key, mixed $default = null): mixed

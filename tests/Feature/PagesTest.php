@@ -50,6 +50,13 @@ class PagesTest extends TestCase
             '/settings/company', '/settings/rotation', '/settings/numbering', '/settings/finance', '/settings/expense-heads',
             '/settings/users', '/settings/users/create',
         ];
+        // Every project page, including ones whose only history is a logged document.
+        foreach (Project::pluck('id') as $id) {
+            $urls[] = "/projects/{$id}";
+        }
+        $urls[] = '/reports';
+        $urls[] = '/rotation?schedule=1';
+        $urls[] = '/invoices/'.Invoice::first()->id.'?pay=1';
         foreach (['overview', 'follow-ups', 'quotations', 'invoices', 'expenses', 'site-visits', 'files', 'notes'] as $tab) {
             $urls[] = "/projects/{$project->id}?tab={$tab}";
         }

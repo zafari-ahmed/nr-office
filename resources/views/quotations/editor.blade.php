@@ -1,4 +1,4 @@
-<x-layouts.app :title="$quotation->exists ? 'Edit quotation' : 'New quotation'">
+<x-layouts.app full :title="$quotation->exists ? 'Edit quotation' : 'New quotation'">
     @include('partials.doc-editor', [
         'doc' => $quotation, 'kind' => 'Quotation', 'number' => $quotation->quotation_number,
         'items' => $items, 'projects' => $projects,

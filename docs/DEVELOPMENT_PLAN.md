@@ -129,7 +129,8 @@ Status legend: ✅ built in this first PR · 🔜 next phase
 ## M12. Reports
 | # | Feature | Status |
 |---|---------|--------|
-| 12.1 | Expenses by head / month, income vs expense, project profitability, export CSV | 🔜 |
+| 12.0 | Reports page in the nav with the design's empty state | ✅ |
+| 12.1 | Report builder: expenses by head / month, income vs expense, project profitability, export PDF / Excel | 🔜 |
 
 ---
 

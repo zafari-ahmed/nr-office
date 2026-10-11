@@ -35,6 +35,8 @@ class ExpenseController extends Controller
             'month' => $month,
             'monthTotal' => (float) Expense::where('status', 'approved')->whereBetween('expense_date', $range)->sum('amount'),
             'pendingCount' => Expense::where('status', 'pending')->count(),
+            'pendingAmount' => (float) Expense::where('status', 'pending')->sum('amount'),
+            'budgetTotal' => (float) \App\Models\ExpenseHead::where('is_active', true)->sum('monthly_budget'),
             'projects' => Project::orderBy('name')->get(['id', 'name', 'code']),
             'employees' => Employee::active()->orderBy('full_name')->get(['id', 'full_name', 'basic_salary']),
         ]);

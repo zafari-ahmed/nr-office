@@ -19,14 +19,14 @@
         </div>
     </div>
 
-    <div class="grid lg:grid-cols-[1fr_300px] gap-6">
+    <div class="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6">
         @include('partials.doc-preview', ['doc' => $invoice, 'kind' => 'Invoice'])
         <aside class="space-y-4">
             <div class="card card-pad">
                 <div class="section-title mb-2">Payment progress</div>
                 @php $pct = $invoice->total > 0 ? min(100, round($invoice->amount_paid / $invoice->total * 100)) : 0; @endphp
                 <div class="flex justify-between text-[13px] mb-1.5"><span>{{ money($invoice->amount_paid) }} received</span><span class="text-muted">{{ $pct }}%</span></div>
-                <div class="bar"><span class="bg-emerald-500" style="width: {{ $pct }}%"></span></div>
+                <div class="bar"><span class="bg-green-fg" style="width: {{ $pct }}%"></span></div>
             </div>
             <div class="card">
                 <div class="px-5 pt-5 pb-2 section-title">Payments</div>
@@ -36,7 +36,7 @@
                             <div class="font-medium tabular-nums">{{ money($p->amount) }}</div>
                             <div class="text-xs text-muted">{{ $p->payment_date->format('d M Y') }} · {{ $methods[$p->method] ?? $p->method }}@if ($p->reference_no) · {{ $p->reference_no }}@endif</div>
                         </div>
-                        <x-action :url="route('payments.destroy', $p)" method="DELETE" confirm="Remove this payment?" class="btn btn-icon hover:text-red-600"><x-icon name="trash-2" /></x-action>
+                        <x-action :url="route('payments.destroy', $p)" method="DELETE" confirm="Remove this payment?" class="btn btn-icon hover:text-red-fg"><x-icon name="trash-2" /></x-action>
                     </div>
                 @empty
                     <p class="px-5 pb-5 text-[13px] text-muted">No payments yet.</p>
@@ -49,6 +49,9 @@
     </div>
 
     <x-slot:drawers>
+        @if (request()->boolean('pay'))
+            <script>document.addEventListener('alpine:initialized', () => Alpine.store('drawer').open('payment'));</script>
+        @endif
         <x-drawer name="payment" title="Record payment" :subtitle="$invoice->invoice_number.' · balance '.money($invoice->balance_due)">
             <form id="payment-form" method="POST" action="{{ route('payments.store', $invoice) }}" class="space-y-4">
                 @csrf

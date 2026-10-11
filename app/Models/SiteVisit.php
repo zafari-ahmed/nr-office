@@ -61,4 +61,12 @@ class SiteVisit extends Model
     {
         return $this->actual_return_date ?? $this->expected_return_date;
     }
+
+    /** Return date for a stay: calendar days, or working days when weekends are not counted (Settings > Rotation rules). */
+    public static function returnDateFor(\Illuminate\Support\Carbon $departure, int $days): \Illuminate\Support\Carbon
+    {
+        return Setting::get('rotation.count_weekends', '1') === '1'
+            ? $departure->copy()->addDays($days)
+            : $departure->copy()->addWeekdays($days);
+    }
 }

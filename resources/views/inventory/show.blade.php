@@ -16,7 +16,7 @@
         </div>
     </div>
 
-    <div class="grid lg:grid-cols-[1fr_300px] gap-6">
+    <div class="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6">
         <div class="card">
             <div class="px-5 pt-5 pb-3 card-title">History</div>
             <div class="overflow-x-auto">
@@ -45,10 +45,10 @@
             @if ($item->type === 'asset')
                 <div class="flex justify-between"><span class="text-muted">Assigned to</span><span>{{ $item->assignee?->full_name ?? 'In office' }}</span></div>
                 <div class="flex justify-between"><span class="text-muted">Purchased</span><span>{{ $item->purchase_date?->format('d M Y') ?? '—' }}</span></div>
-                <div class="flex justify-between"><span class="text-muted">Warranty</span><span @class(['text-red-600' => $item->warranty_until?->isPast()])>{{ $item->warranty_until?->format('d M Y') ?? '—' }}</span></div>
+                <div class="flex justify-between"><span class="text-muted">Warranty</span><span @class(['text-red-fg' => $item->warranty_until?->isPast()])>{{ $item->warranty_until?->format('d M Y') ?? '—' }}</span></div>
             @endif
             @if ($item->notes)<p class="pt-2 border-t border-line text-muted whitespace-pre-line">{{ $item->notes }}</p>@endif
-            <x-action :url="route('inventory.destroy', $item)" method="DELETE" confirm="Remove this item?" class="btn btn-ghost btn-sm w-full mt-2 hover:text-red-600"><x-icon name="trash-2" /> Remove item</x-action>
+            <x-action :url="route('inventory.destroy', $item)" method="DELETE" confirm="Remove this item?" class="btn btn-ghost btn-sm w-full mt-2 hover:text-red-fg"><x-icon name="trash-2" /> Remove item</x-action>
         </aside>
     </div>
 

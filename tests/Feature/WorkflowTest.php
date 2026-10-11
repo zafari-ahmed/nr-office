@@ -191,8 +191,18 @@ class WorkflowTest extends TestCase
 
     public function test_settings_are_saved(): void
     {
-        $this->put('/settings/rotation', ['rotation' => ['default_stay_days' => 10, 'remind_days_before' => 3, 'overdue_reminder_every_days' => 2, 'notify_roles' => ['admin']]])->assertSessionHasNoErrors();
+        $this->put('/settings/rotation', ['rotation' => ['default_stay_days' => 10, 'remind_days_before' => 3, 'overdue_reminder_every_days' => 2, 'notify_roles' => ['admin'], 'count_weekends' => '0']])->assertSessionHasNoErrors();
         $this->assertSame('10', Setting::get('rotation.default_stay_days'));
         $this->assertSame('admin', Setting::get('rotation.notify_roles'));
+        $this->assertSame('0', Setting::get('rotation.count_weekends'));
+    }
+
+    public function test_return_date_skips_weekends_when_they_are_not_counted(): void
+    {
+        $friday = \Illuminate\Support\Carbon::parse('2026-10-16');
+        $this->assertSame('2026-10-18', \App\Models\SiteVisit::returnDateFor($friday, 2)->toDateString());
+
+        Setting::put('rotation.count_weekends', '0');
+        $this->assertSame('2026-10-20', \App\Models\SiteVisit::returnDateFor($friday, 2)->toDateString());
     }
 }

@@ -11,7 +11,7 @@
             @if ($deletable)
                 <form method="POST" action="{{ route('attachments.destroy', $file) }}" onsubmit="return confirm('Remove this file?')">
                     @csrf @method('DELETE')
-                    <button class="btn btn-icon hover:text-red-600" title="Remove"><x-icon name="trash-2" /></button>
+                    <button class="btn btn-icon hover:text-red-fg" title="Remove"><x-icon name="trash-2" /></button>
                 </form>
             @endif
         </li>

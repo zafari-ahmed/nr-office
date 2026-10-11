@@ -11,7 +11,7 @@ class SettingsController extends Controller
 {
     public const SECTIONS = [
         'company' => ['Company profile', 'building-2'],
-        'users' => ['Users & roles', 'users'],
+        'users' => ['Users & roles', 'shield-check'],
         'rotation' => ['Rotation rules', 'refresh-cw'],
         'expense-heads' => ['Expense heads & budgets', 'wallet'],
         'numbering' => ['Numbering', 'hash'],
@@ -31,7 +31,9 @@ class SettingsController extends Controller
             'rotation.default_stay_days' => ['required', 'integer', 'min:1', 'max:120'],
             'rotation.remind_days_before' => ['required', 'integer', 'min:0', 'max:30'],
             'rotation.overdue_reminder_every_days' => ['required', 'integer', 'min:1', 'max:30'],
-            'rotation.notify_roles' => ['required', 'array'],
+            'rotation.notify_roles' => ['nullable', 'array'],
+            'rotation.notify_roles.*' => ['in:admin,manager,accounts,staff'],
+            'rotation.count_weekends' => ['required', 'boolean'],
         ],
         'numbering' => [
             'numbering.project_prefix' => ['required', 'alpha_num', 'max:10'],
@@ -60,6 +62,7 @@ class SettingsController extends Controller
             'sections' => self::SECTIONS,
             'heads' => $section === 'expense-heads' ? ExpenseHead::orderBy('sort_order')->get() : collect(),
             'roles' => User::ROLES,
+            'roleHolders' => User::where('is_active', true)->get(['name', 'role'])->groupBy('role')->map(fn ($u) => $u->pluck('name')->implode(', ')),
         ]);
     }
 
@@ -70,8 +73,11 @@ class SettingsController extends Controller
         $request->validate(self::RULES[$section]);
 
         foreach (array_keys(self::RULES[$section]) as $key) {
+            if (str_contains($key, '*')) {
+                continue;
+            }
             $value = $request->input($key);
-            Setting::put($key, is_array($value) ? implode(',', $value) : $value);
+            Setting::put($key, is_array($value) ? implode(',', $value) : (string) ($value ?? ''));
         }
 
         return back()->with('success', self::SECTIONS[$section][0].' saved.');

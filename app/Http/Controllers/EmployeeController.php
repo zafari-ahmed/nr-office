@@ -19,11 +19,13 @@ class EmployeeController extends Controller
             ->orderBy('full_name')->get();
 
         $employees->each(fn ($e) => $e->live_status = $e->liveStatus());
+        $liveCounts = $employees->countBy('live_status');
+        $total = $employees->count();
         if ($request->live) {
             $employees = $employees->where('live_status', $request->live)->values();
         }
 
-        return view('employees.index', compact('employees'));
+        return view('employees.index', compact('employees', 'liveCounts', 'total'));
     }
 
     public function create()

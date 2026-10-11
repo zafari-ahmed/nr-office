@@ -1,6 +1,6 @@
 <x-layouts.app :title="$user->exists ? 'Edit user' : 'Add user'">
     <x-page-header title="Settings" :subtitle="$user->exists ? 'Edit '.$user->name : 'Add user'" />
-    <div class="grid lg:grid-cols-[240px_1fr] gap-6">
+    <div class="grid grid-cols-1 lg:grid-cols-[240px_1fr] gap-6">
         @include('settings._nav')
         <form method="POST" action="{{ $user->exists ? route('settings.users.update', $user) : route('settings.users.store') }}" class="card card-pad space-y-4 max-w-xl">
             @csrf

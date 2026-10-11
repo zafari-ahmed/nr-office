@@ -16,7 +16,7 @@
         <x-field label="Notes" name="notes" type="textarea" rows="3" :value="$client->notes" />
         <div class="flex justify-between pt-2">
             @if ($client->exists)
-                <x-action :url="route('clients.destroy', $client)" method="DELETE" confirm="Remove this client?" class="btn btn-ghost hover:text-red-600"><x-icon name="trash-2" /> Remove</x-action>
+                <x-action :url="route('clients.destroy', $client)" method="DELETE" confirm="Remove this client?" class="btn btn-ghost hover:text-red-fg"><x-icon name="trash-2" /> Remove</x-action>
             @else <span></span> @endif
             <div class="flex gap-2"><a href="{{ route('clients.index') }}" class="btn btn-secondary">Cancel</a><button class="btn btn-primary">Save</button></div>
         </div>

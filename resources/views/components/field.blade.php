@@ -2,7 +2,7 @@
 @php $dotted = str_replace(['[', ']'], ['.', ''], $name); @endphp
 @php $current = old($dotted, $value); @endphp
 <div {{ $attributes->only('class') }}>
-    @if ($label)<label class="label" for="f-{{ $dotted }}">{{ $label }}@if ($required)<span class="text-red-500"> *</span>@endif</label>@endif
+    @if ($label)<label class="label" for="f-{{ $dotted }}">{{ $label }}@if ($required)<span class="text-red-fg"> *</span>@endif</label>@endif
     @if ($options !== null)
         <select id="f-{{ $dotted }}" name="{{ $name }}" class="input" @required($required) {{ $attributes->except('class') }}>
             @if ($blank !== null)<option value="">{{ $blank }}</option>@endif

@@ -80,10 +80,18 @@ Alpine.data('palette', () => ({
 Alpine.data('visitForm', (defaults) => ({
     departure: defaults.departure,
     days: defaults.days,
+    countWeekends: defaults.countWeekends !== false,
     get returnDate() {
         if (!this.departure || !this.days) return '';
         const d = new Date(this.departure + 'T00:00:00');
-        d.setDate(d.getDate() + Number(this.days));
+        if (this.countWeekends) {
+            d.setDate(d.getDate() + Number(this.days));
+        } else {
+            for (let left = Number(this.days); left > 0;) {
+                d.setDate(d.getDate() + 1);
+                if (d.getDay() !== 0 && d.getDay() !== 6) left--;
+            }
+        }
         return d.toLocaleDateString('en-GB', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' });
     },
 }));

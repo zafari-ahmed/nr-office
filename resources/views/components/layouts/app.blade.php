@@ -1,15 +1,14 @@
 @php
     $nav = [
-        ['Dashboard', 'dashboard', 'layout-dashboard', 'dashboard'],
-        ['Projects', 'projects.index', 'folder-kanban', 'projects.*'],
-        ['Clients', 'clients.index', 'building-2', 'clients.*'],
-        ['Quotations', 'quotations.index', 'file-text', 'quotations.*'],
-        ['Invoices', 'invoices.index', 'receipt', 'invoices.*'],
-        ['Sent log', 'document-logs.index', 'mail', 'document-logs.*'],
-        ['Expenses', 'expenses.index', 'wallet', 'expenses.*'],
-        ['Inventory', 'inventory.index', 'package', 'inventory.*'],
-        ['Employees', 'employees.index', 'users', 'employees.*'],
-        ['Site Rotation', 'rotation.index', 'refresh-cw', 'rotation.*'],
+        ['Dashboard', 'dashboard', 'layout-dashboard', ['dashboard'], 0, ''],
+        ['Projects', 'projects.index', 'folder-kanban', ['projects.*', 'clients.*'], 0, ''],
+        ['Quotations', 'quotations.index', 'file-text', ['quotations.*', 'document-logs.*'], 0, ''],
+        ['Invoices', 'invoices.index', 'receipt', ['invoices.*'], $shellOverdueInvoices ?? 0, 'red'],
+        ['Expenses', 'expenses.index', 'wallet', ['expenses.*'], $shellPendingExpenses ?? 0, 'amber'],
+        ['Inventory', 'inventory.index', 'package', ['inventory.*'], 0, ''],
+        ['Employees', 'employees.index', 'users', ['employees.*'], 0, ''],
+        ['Site Rotation', 'rotation.index', 'calendar-range', ['rotation.*'], $shellOverdueVisits ?? 0, 'red'],
+        ['Reports', 'reports.index', 'bar-chart-3', ['reports.*'], 0, ''],
     ];
     $user = auth()->user();
 @endphp
@@ -21,7 +20,7 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ isset($title) ? $title.' · ' : '' }}{{ \App\Models\Setting::get('company.name') }} Office</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <script>
         try {
             const t = localStorage.getItem('nr-theme');
@@ -35,63 +34,63 @@
 
     {{-- Sidebar --}}
     <div x-cloak x-show="$store.sidebar.mobileOpen" x-transition.opacity class="fixed inset-0 z-40 bg-gray-900/30 lg:hidden" @click="$store.sidebar.mobileOpen = false"></div>
-    <aside :class="[$store.sidebar.collapsed ? 'lg:w-[72px]' : 'lg:w-60', $store.sidebar.mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0']"
-           class="no-print fixed inset-y-0 left-0 z-50 w-64 lg:w-60 flex flex-col bg-surface border-r border-line transition-all duration-200">
-        <div class="flex items-center gap-2.5 h-16 px-4 border-b border-line">
-            <span class="grid place-items-center size-9 rounded-xl bg-accent text-white dark:text-gray-900 font-bold text-sm shrink-0">NR</span>
+    <aside :class="[$store.sidebar.collapsed ? 'lg:w-[68px]' : 'lg:w-[236px]', $store.sidebar.mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0']"
+           class="no-print fixed inset-y-0 left-0 z-50 w-64 lg:w-[236px] flex flex-col bg-side border-r border-line transition-all duration-200">
+        <div class="flex items-center gap-2.5 h-14 px-4 border-b border-line">
+            <span class="grid place-items-center size-[30px] rounded-lg bg-accent text-on-accent font-bold text-[12px] tracking-[.02em] shrink-0">NR</span>
             <div class="min-w-0" x-show="!$store.sidebar.collapsed || $store.sidebar.mobileOpen">
-                <div class="font-semibold leading-tight truncate">{{ \App\Models\Setting::get('company.name') }}</div>
-                <div class="text-[11px] text-muted leading-tight">Office</div>
+                <div class="text-[14px] font-semibold leading-tight truncate">{{ \App\Models\Setting::get('company.name') }}</div>
+                <div class="text-[12px] text-muted leading-tight">Office</div>
             </div>
         </div>
-        <nav class="flex-1 overflow-y-auto p-3 space-y-0.5">
-            @foreach ($nav as [$label, $route, $icon, $pattern])
-                <a href="{{ route($route) }}" @class(['nav-link', 'nav-active' => request()->routeIs($pattern)]) title="{{ $label }}">
+        <nav class="flex-1 overflow-y-auto px-2.5 py-2.5 space-y-0.5">
+            @foreach ($nav as [$label, $route, $icon, $patterns, $badge, $tone])
+                <a href="{{ route($route) }}" @class(['nav-link', 'nav-active' => request()->routeIs(...$patterns)]) title="{{ $label }}">
                     <x-icon :name="$icon" />
                     <span x-show="!$store.sidebar.collapsed || $store.sidebar.mobileOpen" class="flex-1 truncate">{{ $label }}</span>
-                    @if ($route === 'expenses.index' && ($shellPendingExpenses ?? 0) > 0)
-                        <span x-show="!$store.sidebar.collapsed" class="pill pill-amber !h-5 !px-1.5 before:hidden">{{ $shellPendingExpenses }}</span>
+                    @if ($badge > 0)
+                        <span x-show="!$store.sidebar.collapsed || $store.sidebar.mobileOpen" class="count bg-{{ $tone }}-bg text-{{ $tone }}-fg">{{ $badge }}</span>
+                        <span x-cloak x-show="$store.sidebar.collapsed && !$store.sidebar.mobileOpen" class="absolute top-1.5 right-2 size-2 rounded-full bg-{{ $tone }}-fg"></span>
                     @endif
                 </a>
             @endforeach
             @if ($user->hasRole('admin', 'manager'))
-                <div class="pt-3 mt-3 border-t border-line">
-                    <a href="{{ route('settings.index') }}" @class(['nav-link', 'nav-active' => request()->routeIs('settings.*')]) title="Settings">
-                        <x-icon name="settings" /><span x-show="!$store.sidebar.collapsed || $store.sidebar.mobileOpen">Settings</span>
-                    </a>
-                </div>
+                <a href="{{ route('settings.index') }}" @class(['nav-link', 'nav-active' => request()->routeIs('settings.*')]) title="Settings">
+                    <x-icon name="settings" /><span x-show="!$store.sidebar.collapsed || $store.sidebar.mobileOpen">Settings</span>
+                </a>
             @endif
         </nav>
-        <div class="p-3 border-t border-line">
-            <div class="flex items-center gap-2.5 px-1">
-                <x-avatar :name="$user->name" size="size-8 text-[11px]" />
+        <div class="px-2.5 py-2.5 border-t border-line">
+            <button class="hidden lg:flex nav-link w-full" @click="$store.sidebar.toggle()" title="Collapse sidebar">
+                <x-icon name="panel-left-close" x-show="!$store.sidebar.collapsed" />
+                <x-icon name="panel-left-open" x-cloak x-show="$store.sidebar.collapsed" />
+                <span x-show="!$store.sidebar.collapsed">Collapse</span>
+            </button>
+            <div class="flex items-center gap-2.5 px-1.5 pt-2">
+                <x-avatar :name="$user->name" size="size-[30px] text-[11.5px]" />
                 <div class="min-w-0 flex-1" x-show="!$store.sidebar.collapsed || $store.sidebar.mobileOpen">
                     <div class="text-[13px] font-medium truncate">{{ $user->name }}</div>
-                    <div class="text-[11px] text-muted">{{ \App\Models\User::ROLES[$user->role] ?? $user->role }}</div>
+                    <div class="text-[11.5px] text-muted">{{ \App\Models\User::ROLES[$user->role] ?? $user->role }}</div>
                 </div>
                 <form method="POST" action="{{ route('logout') }}" x-show="!$store.sidebar.collapsed || $store.sidebar.mobileOpen">
                     @csrf
-                    <button class="btn btn-icon" title="Sign out"><x-icon name="log-out" /></button>
+                    <button class="btn btn-icon !size-7 !w-7" title="Sign out"><x-icon name="log-out" class="!size-4" /></button>
                 </form>
             </div>
-            <button class="hidden lg:flex nav-link w-full mt-2" @click="$store.sidebar.toggle()" title="Collapse sidebar">
-                <x-icon name="chevron-left" ::class="$store.sidebar.collapsed && 'rotate-180'" class="transition" />
-                <span x-show="!$store.sidebar.collapsed">Collapse</span>
-            </button>
         </div>
     </aside>
 
-    <div :class="$store.sidebar.collapsed ? 'lg:pl-[72px]' : 'lg:pl-60'" class="flex-1 min-w-0 flex flex-col transition-all duration-200">
+    <div :class="$store.sidebar.collapsed ? 'lg:pl-[68px]' : 'lg:pl-[236px]'" class="flex-1 min-w-0 flex flex-col transition-all duration-200">
 
         {{-- Top bar --}}
-        <header class="no-print sticky top-0 z-30 h-16 flex items-center gap-3 px-4 lg:px-8 bg-bg/85 backdrop-blur border-b border-line">
+        <header class="no-print sticky top-0 z-30 h-14 flex items-center gap-3 px-4 lg:px-5 bg-surface border-b border-line">
             <button class="btn btn-icon lg:hidden" @click="$store.sidebar.mobileOpen = true"><x-icon name="menu" /></button>
 
-            <div x-data="palette" class="flex-1 max-w-md">
-                <button @click="show()" class="w-full flex items-center gap-2 h-9 px-3 rounded-lg border border-line bg-surface text-muted text-sm hover:border-accent/40">
+            <div x-data="palette" class="flex-1 max-w-[420px]">
+                <button @click="show()" class="w-full flex items-center gap-2 h-[34px] px-3 rounded-lg border border-line bg-bg text-muted text-[13.5px] hover:border-accent/40">
                     <x-icon name="search" />
-                    <span class="flex-1 text-left truncate"><span class="sm:hidden">Search…</span><span class="hidden sm:inline">Search projects, clients, people…</span></span>
-                    <kbd class="hidden sm:inline text-[11px] border border-line rounded px-1.5 py-0.5">Ctrl K</kbd>
+                    <span class="flex-1 text-left truncate"><span class="sm:hidden">Search…</span><span class="hidden sm:inline">Search projects, people, invoices…</span></span>
+                    <kbd class="hidden sm:inline font-mono text-[11px] bg-surface border border-line rounded px-1.5 py-px">Ctrl K</kbd>
                 </button>
                 <div x-cloak x-show="open" class="fixed inset-0 z-[60] flex items-start justify-center pt-[12vh] px-4 bg-gray-900/30" @click.self="open = false">
                     <div class="card w-full max-w-xl overflow-hidden" @click.outside="open = false">
@@ -118,23 +117,15 @@
             </div>
 
             <div class="flex items-center gap-1.5 ml-auto">
-                <div x-data="{ open: false }" class="relative">
-                    <button class="btn btn-primary" @click="open = !open"><x-icon name="plus" /><span class="hidden sm:inline">New</span><x-icon name="chevron-down" class="hidden sm:block" /></button>
-                    <div x-cloak x-show="open" @click.outside="open = false" x-transition class="absolute right-0 mt-2 w-56 card p-1.5 z-40">
-                        <a href="{{ route('projects.create') }}" class="nav-link"><x-icon name="folder-kanban" /> Project</a>
-                        <a href="{{ route('quotations.create') }}" class="nav-link"><x-icon name="file-text" /> Quotation</a>
-                        <a href="{{ route('invoices.create') }}" class="nav-link"><x-icon name="receipt" /> Invoice</a>
-                        <button class="nav-link w-full" @click="open = false; $store.drawer.open('expense')"><x-icon name="wallet" /> Expense</button>
-                        <button class="nav-link w-full" @click="open = false; $store.drawer.open('follow-up')"><x-icon name="phone-call" /> Follow-up</button>
-                        <button class="nav-link w-full" @click="open = false; $store.drawer.open('log-document')"><x-icon name="mail" /> Log sent document</button>
-                    </div>
-                </div>
-
+                <button class="btn btn-icon" @click="$store.theme.toggle()" title="Toggle theme">
+                    <x-icon name="moon" class="size-[18px] dark:hidden" />
+                    <x-icon name="sun" class="size-[18px] hidden dark:block" />
+                </button>
                 <div x-data="{ open: false }" class="relative">
                     <button class="btn btn-icon relative" @click="open = !open" title="Notifications">
                         <x-icon name="bell" class="size-[18px]" />
                         @if ($shellUnread > 0)
-                            <span class="absolute top-1 right-1 min-w-4 h-4 px-1 rounded-full bg-red-500 text-white text-[10px] leading-4 font-semibold">{{ $shellUnread > 9 ? '9+' : $shellUnread }}</span>
+                            <span class="absolute top-1 right-1 min-w-4 h-4 px-1 rounded-full bg-red-fg text-white ring-2 ring-surface text-[10px] leading-4 font-semibold">{{ $shellUnread > 9 ? '9+' : $shellUnread }}</span>
                         @endif
                     </button>
                     <div x-cloak x-show="open" @click.outside="open = false" x-transition class="absolute right-0 mt-2 w-[22rem] max-w-[calc(100vw-2rem)] card z-40 overflow-hidden">
@@ -164,21 +155,30 @@
                     </div>
                 </div>
 
-                <button class="btn btn-icon" @click="$store.theme.toggle()" title="Toggle theme">
-                    <x-icon name="moon" class="size-[18px] dark:hidden" />
-                    <x-icon name="sun" class="size-[18px] hidden dark:block" />
-                </button>
+                <div x-data="{ open: false }" class="relative">
+                    <button class="btn btn-primary" @click="open = !open"><x-icon name="plus" /><span class="hidden sm:inline">New</span><x-icon name="chevron-down" class="hidden sm:block !size-3.5" /></button>
+                    <div x-cloak x-show="open" @click.outside="open = false" x-transition class="absolute right-0 mt-2 w-56 card p-1.5 z-40">
+                        <a href="{{ route('projects.create') }}" class="nav-link"><x-icon name="folder-kanban" /> Project</a>
+                        <a href="{{ route('quotations.create') }}" class="nav-link"><x-icon name="file-text" /> Quotation</a>
+                        <a href="{{ route('invoices.create') }}" class="nav-link"><x-icon name="receipt" /> Invoice</a>
+                        <button class="nav-link w-full" @click="open = false; $store.drawer.open('expense')"><x-icon name="wallet" /> Expense</button>
+                        <button class="nav-link w-full" @click="open = false; $store.drawer.open('follow-up')"><x-icon name="phone-call" /> Follow-up</button>
+                        <button class="nav-link w-full" @click="open = false; $store.drawer.open('log-document')"><x-icon name="mail" /> Log sent document</button>
+                    </div>
+                </div>
+
+                <x-avatar :name="$user->name" size="size-8 text-[11.5px] ml-1.5" />
             </div>
         </header>
 
-        <main class="flex-1 px-4 py-6 lg:px-8 lg:py-8 pb-24 lg:pb-8">
+        <main @class(['flex-1 w-full', 'max-w-[1320px] mx-auto px-4 py-6 lg:px-8 lg:pt-7 pb-24 lg:pb-12' => ! ($full ?? false), 'flex flex-col pb-16 lg:pb-0' => $full ?? false])>
             {{ $slot }}
         </main>
     </div>
 
     {{-- Mobile bottom tabs + floating add --}}
     <nav class="no-print lg:hidden fixed bottom-0 inset-x-0 z-30 bg-surface border-t border-line grid grid-cols-5 h-16">
-        @foreach ([['Dashboard', 'dashboard', 'layout-dashboard', 'dashboard'], ['Projects', 'projects.index', 'folder-kanban', 'projects.*'], ['Rotation', 'rotation.index', 'refresh-cw', 'rotation.*'], ['Expenses', 'expenses.index', 'wallet', 'expenses.*']] as [$label, $route, $icon, $pattern])
+        @foreach ([['Dashboard', 'dashboard', 'layout-dashboard', 'dashboard'], ['Projects', 'projects.index', 'folder-kanban', 'projects.*'], ['Rotation', 'rotation.index', 'calendar-range', 'rotation.*'], ['Expenses', 'expenses.index', 'wallet', 'expenses.*']] as [$label, $route, $icon, $pattern])
             <a href="{{ route($route) }}" @class(['flex flex-col items-center justify-center gap-0.5 text-[11px]', 'text-accent' => request()->routeIs($pattern), 'text-muted' => ! request()->routeIs($pattern)])>
                 <x-icon :name="$icon" class="size-5" />{{ $label }}
             </a>
@@ -209,7 +209,7 @@
     <div class="no-print fixed z-[70] bottom-20 lg:bottom-6 right-4 left-4 sm:left-auto sm:w-96 space-y-2">
         <template x-for="t in $store.toasts.items" :key="t.id">
             <div x-transition class="card flex items-center gap-3 px-4 py-3 shadow-lg">
-                <span :class="t.tone === 'error' ? 'bg-red-500' : 'bg-emerald-500'" class="size-2 rounded-full shrink-0"></span>
+                <span :class="t.tone === 'error' ? 'bg-red-fg' : 'bg-green-fg'" class="size-2 rounded-full shrink-0"></span>
                 <span class="flex-1 text-sm" x-text="t.message"></span>
                 <button class="text-muted hover:text-ink text-xs" @click="$store.toasts.remove(t.id)">Dismiss</button>
             </div>

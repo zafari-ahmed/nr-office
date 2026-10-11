@@ -14,8 +14,8 @@ class SiteVisitController extends Controller
 {
     public function index(Request $request)
     {
-        $start = $request->query('from') ? Carbon::parse($request->query('from')) : today()->subDays(7);
-        $days = (int) $request->query('days', 28);
+        $start = $request->query('from') ? Carbon::parse($request->query('from')) : today()->subDays(6);
+        $days = (int) $request->query('days', 21);
         $end = $start->copy()->addDays($days - 1);
 
         $staff = Employee::active()->where('is_site_staff', true)->orderByRaw('rotation_order is null, rotation_order')->orderBy('full_name')
@@ -39,6 +39,7 @@ class SiteVisitController extends Controller
             'suggested' => $this->suggestNext(),
             'defaultDays' => Setting::int('rotation.default_stay_days'),
             'remindDays' => $remind,
+            'onSiteCount' => $onSite->count(),
         ]);
     }
 
@@ -49,7 +50,7 @@ class SiteVisitController extends Controller
         $visit = SiteVisit::create([
             ...$data,
             'site_name' => $data['site_name'] ?: Project::find($data['project_id'])?->name ?? 'Site',
-            'expected_return_date' => $departure->copy()->addDays($data['planned_days']),
+            'expected_return_date' => SiteVisit::returnDateFor($departure, (int) $data['planned_days']),
             'status' => $departure->lte(today()) ? 'on_site' : 'scheduled',
             'created_by' => $request->user()->id,
         ]);
@@ -62,7 +63,7 @@ class SiteVisitController extends Controller
     public function update(Request $request, SiteVisit $visit)
     {
         $data = $this->validated($request);
-        $visit->update([...$data, 'expected_return_date' => Carbon::parse($data['departure_date'])->addDays($data['planned_days'])]);
+        $visit->update([...$data, 'expected_return_date' => SiteVisit::returnDateFor(Carbon::parse($data['departure_date']), (int) $data['planned_days'])]);
 
         return back()->with('success', 'Visit updated.');
     }

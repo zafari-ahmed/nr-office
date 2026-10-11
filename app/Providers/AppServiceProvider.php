@@ -5,7 +5,9 @@ namespace App\Providers;
 use App\Models\Employee;
 use App\Models\Expense;
 use App\Models\ExpenseHead;
+use App\Models\Invoice;
 use App\Models\Project;
+use App\Models\SiteVisit;
 use App\Models\User;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\View;
@@ -31,6 +33,8 @@ class AppServiceProvider extends ServiceProvider
             $view->with([
                 'shellNotifications' => $user->notifications()->latest()->limit(8)->get(),
                 'shellUnread' => $user->unreadNotifications()->count(),
+                'shellOverdueInvoices' => Invoice::where('status', 'overdue')->count(),
+                'shellOverdueVisits' => SiteVisit::onSite()->whereDate('expected_return_date', '<', today())->count(),
                 'shellPendingExpenses' => $user->hasRole('admin', 'manager', 'accounts') ? Expense::where('status', 'pending')->count() : 0,
                 'quickProjects' => Project::whereNotIn('status', ['completed', 'cancelled'])->orderBy('name')->get(['id', 'name', 'code']),
                 'quickHeads' => ExpenseHead::where('is_active', true)->orderBy('sort_order')->get(['id', 'name']),

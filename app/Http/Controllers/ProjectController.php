@@ -15,16 +15,18 @@ class ProjectController extends Controller
     public function index(Request $request)
     {
         $view = $request->query('view', 'table');
-        $query = Project::with(['client', 'nextFollowUp'])
+        $query = Project::with(['client', 'nextFollowUp', 'manager'])
             ->withSum(['invoices as outstanding' => fn ($q) => $q->whereNotIn('status', ['draft', 'cancelled'])], 'balance_due')
-            ->when($request->q, fn ($q, $s) => $q->where(fn ($w) => $w->where('name', 'like', "%$s%")->orWhere('code', 'like', "%$s%")))
+            ->when($request->q, fn ($q, $s) => $q->where(fn ($w) => $w->where('name', 'like', "%$s%")->orWhere('code', 'like', "%$s%")
+                ->orWhereHas('client', fn ($c) => $c->where('name', 'like', "%$s%")->orWhere('company_name', 'like', "%$s%"))))
             ->when($request->status, fn ($q, $s) => $q->where('status', $s))
             ->latest();
 
         $projects = $view === 'board' ? $query->get() : $query->paginate(20)->withQueryString();
         $counts = Project::selectRaw('status, count(*) as total')->groupBy('status')->pluck('total', 'status');
+        $totalValue = (float) Project::whereNot('status', 'cancelled')->sum('project_value');
 
-        return view('projects.index', compact('projects', 'view', 'counts'));
+        return view('projects.index', compact('projects', 'view', 'counts', 'totalValue'));
     }
 
     public function create()
@@ -62,7 +64,7 @@ class ProjectController extends Controller
         ]);
 
         // Timeline merges activity log entries with "Logged" document cards.
-        $timeline = $project->activities()->with('user')->limit(40)->get()
+        $timeline = $project->activities()->with('user')->where('action', '!=', 'logged')->limit(40)->get()->toBase()
             ->map(fn ($a) => ['kind' => 'activity', 'at' => $a->created_at, 'item' => $a])
             ->merge($project->documentLogs->map(fn ($d) => ['kind' => 'log', 'at' => $d->sent_date->copy()->setTimeFrom($d->created_at), 'item' => $d]))
             ->sortByDesc('at')->values();

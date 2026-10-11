@@ -1,61 +1,76 @@
 <x-layouts.app :title="$project->name">
     @php
         $tabs = [
-            'overview' => 'Overview',
-            'follow-ups' => 'Follow-ups ('.$project->followUps->where('status', 'pending')->count().')',
-            'quotations' => 'Quotations ('.$project->quotations->count().')',
-            'invoices' => 'Invoices ('.$project->invoices->count().')',
-            'expenses' => 'Expenses',
-            'site-visits' => 'Site visits',
-            'files' => 'Files ('.$project->attachments->count().')',
-            'notes' => 'Notes ('.$project->notes->count().')',
+            'overview' => ['Overview', null],
+            'follow-ups' => ['Follow-ups', $project->followUps->where('status', 'pending')->count()],
+            'quotations' => ['Quotations', $project->quotations->count()],
+            'invoices' => ['Invoices', $project->invoices->count()],
+            'expenses' => ['Expenses', null],
+            'site-visits' => ['Site visits', null],
+            'files' => ['Files', null],
+            'notes' => ['Notes', null],
         ];
+        $pct = fn ($a, $b) => $b > 0 ? round($a / $b * 100).'%' : '0%';
+        $latestQuote = $project->quotations->whereNotIn('status', ['revised', 'rejected'])->sortByDesc('id')->first();
+        $openInvoices = $project->invoices->whereNotIn('status', ['paid', 'cancelled', 'draft'])->count();
+        $kpiCells = [
+            ['Quoted', $kpis['quoted'], $latestQuote ? $latestQuote->label() : 'No quotation yet', ''],
+            ['Invoiced', $kpis['invoiced'], $pct($kpis['invoiced'], $kpis['quoted']).' of quoted', ''],
+            ['Received', $kpis['received'], $pct($kpis['received'], $kpis['invoiced']).' of invoiced', $kpis['received'] > 0 ? 'text-green-fg' : ''],
+            ['Outstanding', $kpis['outstanding'], $openInvoices.' open '.str('invoice')->plural($openInvoices), $kpis['outstanding'] > 0 ? 'text-amber-fg' : ''],
+            ['Expenses', $kpis['expenses'], $pct($kpis['expenses'], $kpis['quoted']).' of quoted', ''],
+        ];
+        $team = collect([$project->manager ? ['name' => $project->manager->name, 'role' => 'Project Manager'] : null])
+            ->merge($project->siteVisits->toBase()->pluck('employee')->filter()->unique(fn ($e) => $e->id)->map(fn ($e) => ['name' => $e->full_name, 'role' => $e->designation]))
+            ->filter()->take(6);
         $next = $project->followUps->where('status', 'pending')->sortBy('due_date')->first();
     @endphp
 
     {{-- Header --}}
-    <div class="flex flex-col xl:flex-row xl:items-start justify-between gap-4 mb-6">
-        <div class="min-w-0 flex-1">
-            <a href="{{ route('projects.index') }}" class="text-[13px] text-muted hover:text-ink inline-flex items-center gap-1"><x-icon name="chevron-left" class="size-3.5" /> Projects</a>
-            <div class="flex flex-wrap items-center gap-3 mt-1">
-                <h1 class="text-[22px] font-semibold">{{ $project->name }}</h1>
-                <x-pill :status="$project->status" :label="\App\Models\Project::STATUSES[$project->status]" />
-            </div>
-            <div class="text-muted mt-1 flex flex-wrap gap-x-4 gap-y-1 text-[13px]">
-                <span class="inline-flex items-center gap-1"><x-icon name="hash" class="size-3.5" />{{ $project->code }}</span>
-                @if ($project->client)<span class="inline-flex items-center gap-1"><x-icon name="building-2" class="size-3.5" />{{ $project->client->displayName() }}@if ($project->client->phone) · {{ $project->client->phone }}@endif</span>@endif
-                @if ($project->site_address || $project->city)<span class="inline-flex items-center gap-1"><x-icon name="map-pin" class="size-3.5" />{{ collect([$project->site_address, $project->city])->filter()->implode(', ') }}</span>@endif
-                @if ($project->manager)<span class="inline-flex items-center gap-1"><x-icon name="user" class="size-3.5" />{{ $project->manager->name }}</span>@endif
-            </div>
-        </div>
-        <div class="flex flex-wrap gap-2 xl:shrink-0">
+    <x-page-header :title="$project->name">
+        <x-slot:crumbs>
+            <a href="{{ route('projects.index') }}" class="text-muted hover:text-ink no-underline">Projects</a>
+            <x-icon name="chevron-right" class="size-3.5" />
+            <span class="font-mono text-[12px]">{{ $project->code }}</span>
+        </x-slot:crumbs>
+        <x-slot:badges>
+            <x-pill :status="$project->status" :label="\App\Models\Project::STATUSES[$project->status]" />
+            <span class="code-chip">{{ $project->code }}</span>
+        </x-slot:badges>
+        <x-slot:meta>
+            @if ($project->client)<span class="inline-flex items-center gap-1.5"><x-icon name="building-2" class="size-3.5" />{{ $project->client->displayName() }}</span>@endif
+            @if ($project->site_address || $project->city)<span class="inline-flex items-center gap-1.5"><x-icon name="map-pin" class="size-3.5" />{{ collect([$project->site_address, $project->city])->filter()->implode(', ') }}</span>@endif
+            @if ($project->manager)<span class="inline-flex items-center gap-1.5"><x-icon name="user" class="size-3.5" />{{ $project->manager->name }}</span>@endif
+        </x-slot:meta>
+        <x-slot:actions>
             <form method="POST" action="{{ route('projects.status', $project) }}" x-data>
                 @csrf @method('PATCH')
-                <select name="status" class="input !h-9 !w-36" @change="$el.form.submit()">
+                <select name="status" class="input !h-[34px] !w-32" @change="$el.form.submit()" title="Change status">
                     @foreach (\App\Models\Project::STATUSES as $k => $l)<option value="{{ $k }}" @selected($project->status === $k)>{{ $l }}</option>@endforeach
                 </select>
             </form>
-            <a href="{{ route('projects.edit', $project) }}" class="btn btn-secondary"><x-icon name="pencil" /> Edit</a>
-            <button class="btn btn-secondary" @click="$store.drawer.open('log-document-{{ $project->id }}')"><x-icon name="mail" /> Log document</button>
-            <a href="{{ route('quotations.create', ['project' => $project->id]) }}" class="btn btn-primary"><x-icon name="plus" /> Quotation</a>
-        </div>
-    </div>
+            <a href="{{ route('projects.edit', $project) }}" class="btn btn-icon btn-secondary" title="Edit project"><x-icon name="pencil" /></a>
+            <button class="btn btn-secondary" @click="$store.drawer.open('log-document-{{ $project->id }}')"><x-icon name="paperclip" /> Log sent document</button>
+            <a href="{{ route('quotations.create', ['project' => $project->id]) }}" class="btn btn-primary"><x-icon name="file-plus" /> New quotation</a>
+        </x-slot:actions>
+    </x-page-header>
 
-    {{-- KPI row --}}
-    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
-        @foreach (['quoted' => 'Quoted', 'invoiced' => 'Invoiced', 'received' => 'Received', 'outstanding' => 'Outstanding', 'expenses' => 'Expenses'] as $key => $label)
-            <div class="card card-pad">
-                <div class="text-[13px] text-muted">{{ $label }}</div>
-                <div @class(['text-xl font-semibold mt-1 tabular-nums', 'text-amber-600' => $key === 'outstanding' && $kpis[$key] > 0, 'text-emerald-600' => $key === 'received' && $kpis[$key] > 0])>{{ money($kpis[$key]) }}</div>
+    {{-- KPI strip --}}
+    <div class="card grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 mb-5 overflow-hidden">
+        @foreach ($kpiCells as [$label, $amount, $sub, $tone])
+            <div class="px-[18px] py-4 border-line border-b lg:border-b-0 [&:not(:last-child)]:border-r">
+                <div class="text-[13px] text-ink-2">{{ $label }}</div>
+                <div @class(['text-[22px] font-semibold tracking-[-.01em] mt-1.5 tabular-nums', $tone])>{{ money($amount) }}</div>
+                <div class="text-[12px] text-muted mt-0.5 truncate">{{ $sub }}</div>
             </div>
         @endforeach
     </div>
 
-    <div class="grid lg:grid-cols-[1fr_300px] gap-6">
+    <div class="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-5">
         <div class="min-w-0">
             <nav class="tabs mb-5">
                 @foreach ($tabs as $key => $label)
-                    <a href="{{ route('projects.show', [$project, 'tab' => $key]) }}" @class(['tab', 'tab-active' => $tab === $key])>{{ $label }}</a>
+                    <a href="{{ route('projects.show', [$project, 'tab' => $key]) }}" @class(['tab', 'tab-active' => $tab === $key])>{{ $label[0] }}@if ($label[1] !== null)<span class="count bg-bg2 text-muted !h-[18px] !text-[11px] font-mono font-medium">{{ $label[1] }}</span>@endif</a>
                 @endforeach
             </nav>
 
@@ -64,7 +79,7 @@
                     <div class="card">
                         @forelse ($project->followUps as $f)
                             <div class="flex items-center gap-3 px-5 py-3 border-b border-line last:border-0">
-                                <span @class(['size-2.5 rounded-full shrink-0', 'bg-emerald-500' => $f->status === 'done', 'bg-red-500' => $f->isOverdue(), 'bg-amber-400' => $f->status === 'pending' && ! $f->isOverdue()])></span>
+                                <span @class(['size-2.5 rounded-full shrink-0', 'bg-green-fg' => $f->status === 'done', 'bg-red-fg' => $f->isOverdue(), 'bg-amber-fg' => $f->status === 'pending' && ! $f->isOverdue()])></span>
                                 <div class="min-w-0 flex-1">
                                     <div @class(['font-medium', 'line-through text-muted' => $f->status === 'done'])>{{ $f->title }}</div>
                                     <div class="text-xs text-muted">{{ $f->due_date->format('D, d M Y') }} · {{ $f->assignee?->name ?? 'Unassigned' }}@if ($f->notes) · {{ \Illuminate\Support\Str::limit($f->notes, 80) }}@endif</div>
@@ -190,7 +205,7 @@
                                     <div class="flex items-center gap-2 text-[13px]"><x-avatar :name="$note->user?->name ?? '?'" size="size-6 text-[10px]" /> <span class="font-medium">{{ $note->user?->name }}</span> <span class="text-muted">{{ $note->created_at->diffForHumans() }}</span></div>
                                     <div class="flex">
                                         <x-action :url="route('notes.pin', $note)" @class(['btn btn-icon', 'text-accent' => $note->is_pinned]) title="Pin"><x-icon name="pin" /></x-action>
-                                        <x-action :url="route('notes.destroy', $note)" method="DELETE" confirm="Delete this note?" class="btn btn-icon hover:text-red-600"><x-icon name="trash-2" /></x-action>
+                                        <x-action :url="route('notes.destroy', $note)" method="DELETE" confirm="Delete this note?" class="btn btn-icon hover:text-red-fg"><x-icon name="trash-2" /></x-action>
                                     </div>
                                 </div>
                                 <p class="whitespace-pre-line">{{ $note->body }}</p>
@@ -201,83 +216,126 @@
 
                 @default
                     @if ($project->description)
-                        <div class="card card-pad mb-6">
-                            <h2 class="card-title mb-2">Scope</h2>
-                            <p class="text-[13.5px] whitespace-pre-line text-muted">{{ $project->description }}</p>
-                        </div>
+                        <div class="card px-[18px] py-3.5 mb-4 text-[13.5px] text-ink-2 whitespace-pre-line"><span class="section-title block mb-1">Scope</span>{{ $project->description }}</div>
                     @endif
-                    <h2 class="card-title mb-3">Activity timeline</h2>
-                    <ol class="relative border-l border-line ml-3 space-y-5">
+                    <ol class="relative">
+                        <span class="absolute left-[15px] top-2 bottom-2 w-px bg-line"></span>
                         @forelse ($timeline as $entry)
                             @if ($entry['kind'] === 'log')
                                 @php $log = $entry['item']; @endphp
-                                <li class="ml-6">
-                                    <span class="absolute -left-[13px] grid place-items-center size-6 rounded-full bg-accent-soft text-accent ring-4 ring-bg"><x-icon name="paperclip" class="size-3.5" /></span>
-                                    <div class="card p-4" x-data="{ open: false }">
+                                <li class="relative flex gap-3.5 pb-4">
+                                    <span class="relative z-10 grid place-items-center size-8 rounded-full bg-accent-soft text-accent-ink ring-4 ring-bg shrink-0"><x-icon name="paperclip" class="size-4" /></span>
+                                    <div class="card flex-1 min-w-0 p-4" x-data="{ open: false }">
                                         <div class="flex flex-wrap items-center gap-2">
-                                            <span class="pill pill-teal">Logged</span>
-                                            <span class="font-medium">{{ \App\Models\DocumentLog::TYPES[$log->document_type] }} {{ $log->reference_no }}</span>
-                                            @if ($log->amount)<span class="text-muted">· {{ money($log->amount) }}</span>@endif
+                                            <span class="tag bg-grey-bg text-grey-fg"><x-icon name="paperclip" class="size-3" /> Logged</span>
+                                            <span class="tag bg-accent-soft text-accent-ink normal-case tracking-normal text-[12px] font-medium rounded-full">{{ \App\Models\DocumentLog::TYPES[$log->document_type] }}</span>
+                                            <span class="font-mono text-[13px] font-semibold">{{ $log->reference_no }}</span>
+                                            @if ($log->amount)<span class="font-semibold tabular-nums">{{ money($log->amount) }}</span>@endif
                                             <x-pill :status="$log->status" class="ml-auto" />
                                         </div>
-                                        <div class="text-xs text-muted mt-1">
-                                            Sent by {{ $log->creator?->name ?? '—' }} to {{ $log->sent_to_name ?: '—' }}@if ($log->sent_to_email) &lt;{{ $log->sent_to_email }}&gt;@endif · {{ $log->sent_date->format('d M Y') }}
-                                            @if ($log->attachments->isNotEmpty()) · <x-icon name="paperclip" class="size-3 inline" /> {{ $log->attachments->count() }} file(s)@endif
+                                        <div class="flex flex-wrap items-center gap-1.5 text-[12.5px] text-ink-2 mt-2.5">
+                                            <x-avatar :name="$log->creator?->name ?? '?'" size="size-5 text-[9px]" />
+                                            <span class="font-medium text-ink">{{ $log->creator?->name ?? '—' }}</span>
+                                            <x-icon name="arrow-right" class="size-3.5 text-muted" />
+                                            <span>{{ $log->sent_to_name ?: '—' }}</span>
+                                            @if ($log->sent_to_email)<span class="text-muted">&lt;{{ $log->sent_to_email }}&gt;</span>@endif
+                                            <span class="text-muted">· {{ $log->sent_date->format('j M') }}</span>
+                                            @if ($log->attachments->isNotEmpty())<span class="text-muted inline-flex items-center gap-0.5"><x-icon name="paperclip" class="size-3" />{{ $log->attachments->count() }}</span>@endif
                                         </div>
-                                        @if ($log->last_discussion)
-                                            <div class="mt-3 rounded-lg bg-surface-2 px-3 py-2 text-[13px]"><span class="font-medium">Last discussion:</span> {{ $log->last_discussion }}</div>
-                                        @endif
                                         @if ($log->email_subject || $log->email_body)
-                                            <button class="mt-2 text-xs link inline-flex items-center gap-1" @click="open = !open"><x-icon name="mail" class="size-3.5" /> <span x-text="open ? 'Hide email' : 'Show email'"></span>@if ($log->email_subject): {{ \Illuminate\Support\Str::limit($log->email_subject, 60) }}@endif</button>
-                                            <div x-show="open" x-cloak class="mt-2 rounded-lg border border-line p-3 text-[13px] whitespace-pre-line">{{ $log->email_body }}</div>
+                                            <div class="mt-3 rounded-lg bg-surface-2 px-3.5 py-3">
+                                                @if ($log->email_subject)<div class="text-[13.5px] font-semibold">{{ $log->email_subject }}</div>@endif
+                                                <div class="text-[13px] text-muted mt-1 whitespace-pre-line" x-show="!open">{{ \Illuminate\Support\Str::limit($log->email_body, 180) }}</div>
+                                                <div class="text-[13px] text-ink-2 mt-1 whitespace-pre-line" x-show="open" x-cloak>{{ $log->email_body }}</div>
+                                                @if (strlen((string) $log->email_body) > 180)
+                                                    <button class="mt-1.5 text-[12.5px] font-medium text-accent inline-flex items-center gap-1" @click="open = !open"><x-icon name="mail" class="size-3.5" /><span x-text="open ? 'Hide full email' : 'Show full email'"></span></button>
+                                                @endif
+                                            </div>
+                                        @endif
+                                        @if ($log->last_discussion)
+                                            <div class="mt-2.5 rounded-lg bg-amber-bg px-3.5 py-2.5">
+                                                <div class="text-[11px] font-semibold uppercase tracking-[.04em] text-amber-fg">What was discussed</div>
+                                                <div class="text-[13.5px] text-ink mt-1">{{ $log->last_discussion }}</div>
+                                            </div>
                                         @endif
                                         @if ($log->attachments->isNotEmpty())
                                             <div class="flex flex-wrap gap-2 mt-3">
                                                 @foreach ($log->attachments as $file)
-                                                    <a href="{{ route('attachments.download', [$file, 'inline' => 1]) }}" target="_blank" class="chip"><x-icon name="paperclip" class="size-3.5" />{{ \Illuminate\Support\Str::limit($file->original_name, 30) }}</a>
+                                                    <a href="{{ route('attachments.download', [$file, 'inline' => 1]) }}" target="_blank" class="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-md border border-line text-[12.5px] text-ink-2 no-underline hover:text-ink hover:no-underline"><x-icon name="file" class="size-3.5" />{{ \Illuminate\Support\Str::limit($file->original_name, 34) }}</a>
                                                 @endforeach
                                             </div>
                                         @endif
                                     </div>
                                 </li>
                             @else
-                                @php $a = $entry['item']; @endphp
-                                <li class="ml-6">
-                                    <span class="absolute -left-[7px] mt-1.5 size-3 rounded-full bg-line ring-4 ring-bg"></span>
-                                    <div class="text-[13.5px]"><span class="font-medium">{{ $a->user?->name ?? 'System' }}</span> {{ lcfirst($a->description) }}</div>
-                                    <div class="text-xs text-muted">{{ $a->created_at->format('d M Y, g:i a') }}</div>
+                                @php $a = $entry['item']; [$icon, $tone] = activity_style($a->action); @endphp
+                                <li class="relative flex gap-3.5 pb-4">
+                                    <span class="relative z-10 grid place-items-center size-8 rounded-full ring-4 ring-bg shrink-0 {{ $tone === 'teal' ? 'bg-accent-soft text-accent-ink' : "bg-$tone-bg text-$tone-fg" }}"><x-icon :name="$icon" class="size-4" /></span>
+                                    <div class="flex-1 min-w-0 pt-1">
+                                        <div class="flex items-start gap-3">
+                                            <div class="flex-1 text-[13.5px] font-medium">{{ $a->description }}</div>
+                                            <span class="text-[12px] text-muted shrink-0">{{ $a->created_at->format('j M') }}</span>
+                                        </div>
+                                        <div class="text-[12.5px] text-muted">{{ $a->user?->name ?? 'System' }}</div>
+                                    </div>
                                 </li>
                             @endif
                         @empty
-                            <li class="ml-6 text-muted">No activity yet.</li>
+                            <li class="pl-12 text-muted">No activity yet.</li>
                         @endforelse
                     </ol>
             @endswitch
         </div>
 
         {{-- Right rail --}}
-        <aside class="space-y-4">
-            <div class="card card-pad">
-                <div class="section-title mb-2">Next follow-up</div>
+        <aside class="space-y-3.5">
+            <div class="card p-4">
+                <div class="section-title mb-3">Next follow-up</div>
                 @if ($next)
-                    <div @class(['font-medium', 'text-red-600' => $next->isOverdue()])>{{ $next->due_date->format('D, d M Y') }}</div>
-                    <div class="text-[13.5px] mt-0.5">{{ $next->title }}</div>
-                    <div class="text-xs text-muted mt-0.5">{{ $next->assignee?->name ?? 'Unassigned' }}</div>
-                    <div class="flex gap-2 mt-3">
-                        <x-action :url="route('follow-ups.done', $next)" class="btn btn-secondary btn-sm flex-1"><x-icon name="check" /> Done</x-action>
-                        <x-action :url="route('follow-ups.snooze', $next)" data-days="2" class="btn btn-ghost btn-sm">Snooze</x-action>
+                    <div class="flex gap-3">
+                        <div @class(['grid place-items-center w-12 h-[52px] rounded-lg shrink-0 text-center leading-none', 'bg-red-bg text-red-fg' => $next->isOverdue(), 'bg-amber-bg text-amber-fg' => ! $next->isOverdue()])>
+                            <div><div class="text-[11.5px] font-medium">{{ $next->due_date->format('D') }}</div><div class="font-mono text-[20px] font-semibold mt-0.5">{{ $next->due_date->format('j') }}</div></div>
+                        </div>
+                        <div class="min-w-0">
+                            <div class="text-[14px] font-medium leading-snug">{{ $next->title }}</div>
+                            <div class="text-[12.5px] text-muted mt-0.5">Assigned to {{ $next->assignee ? strtok($next->assignee->name, ' ') : 'nobody' }}</div>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2 mt-3.5">
+                        <x-action :url="route('follow-ups.done', $next)" block class="btn btn-secondary btn-sm"><x-icon name="check" /> Done</x-action>
+                        <x-action :url="route('follow-ups.snooze', $next)" data-days="2" block class="btn btn-secondary btn-sm"><x-icon name="clock" /> Snooze</x-action>
                     </div>
                 @else
                     <p class="text-muted text-[13px]">Nothing scheduled.</p>
                 @endif
-                <button class="btn btn-primary w-full mt-3" @click="$store.drawer.open('follow-up-{{ $project->id }}')"><x-icon name="plus" /> Add follow-up</button>
+                <button class="btn w-full mt-2.5 bg-accent-soft text-accent-ink hover:brightness-95" @click="$store.drawer.open('follow-up-{{ $project->id }}')"><x-icon name="plus" /> Add follow-up</button>
             </div>
-            <div class="card card-pad text-[13px] space-y-2">
-                <div class="section-title mb-1">Details</div>
-                <div class="flex justify-between"><span class="text-muted">Value</span><span class="font-medium">{{ money($project->project_value) }}</span></div>
-                <div class="flex justify-between"><span class="text-muted">Start</span><span>{{ $project->start_date?->format('d M Y') ?? '—' }}</span></div>
-                <div class="flex justify-between"><span class="text-muted">End</span><span>{{ $project->end_date?->format('d M Y') ?? '—' }}</span></div>
-                @if ($project->client?->email)<div class="flex justify-between gap-2"><span class="text-muted">Email</span><a href="mailto:{{ $project->client->email }}" class="link truncate">{{ $project->client->email }}</a></div>@endif
+            @if ($project->client)
+                <div class="card p-4 text-[13.5px]">
+                    <div class="section-title mb-2.5">Client contact</div>
+                    <div class="font-medium">{{ $project->client->contact_person ?: $project->client->name }}</div>
+                    @if ($project->client->email)<a href="mailto:{{ $project->client->email }}" class="flex items-center gap-2 mt-1.5 text-ink-2 no-underline hover:text-ink"><x-icon name="mail" class="size-3.5 text-muted" />{{ $project->client->email }}</a>@endif
+                    @if ($project->client->phone)<a href="tel:{{ $project->client->phone }}" class="flex items-center gap-2 mt-1 text-ink-2 no-underline hover:text-ink"><x-icon name="phone" class="size-3.5 text-muted" />{{ $project->client->phone }}</a>@endif
+                </div>
+            @endif
+            @if ($team->isNotEmpty())
+                <div class="card p-4">
+                    <div class="section-title mb-2.5">Team</div>
+                    <div class="space-y-2.5">
+                        @foreach ($team as $m)
+                            <div class="flex items-center gap-2.5">
+                                <x-avatar :name="$m['name']" size="size-[30px] text-[11px]" />
+                                <div class="leading-tight"><div class="text-[13.5px] font-medium">{{ $m['name'] }}</div><div class="text-[12px] text-muted">{{ $m['role'] }}</div></div>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+            @endif
+            <div class="card p-4 text-[13px] space-y-1.5">
+                <div class="section-title mb-2">Details</div>
+                <div class="flex justify-between"><span class="text-muted">Project value</span><span class="font-medium tabular-nums">{{ money($project->project_value) }}</span></div>
+                <div class="flex justify-between"><span class="text-muted">Start</span><span>{{ $project->start_date?->format('j M Y') ?? '—' }}</span></div>
+                <div class="flex justify-between"><span class="text-muted">End</span><span>{{ $project->end_date?->format('j M Y') ?? '—' }}</span></div>
             </div>
         </aside>
     </div>

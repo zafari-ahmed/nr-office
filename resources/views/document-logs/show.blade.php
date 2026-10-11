@@ -9,7 +9,7 @@
         <p class="text-muted mt-1"><a href="{{ route('projects.show', $log->project) }}" class="link">{{ $log->project->name }}</a> · sent {{ $log->sent_date->format('d M Y') }} by {{ $log->creator?->name }}@if ($log->amount) · {{ money($log->amount) }}@endif</p>
     </div>
 
-    <div class="grid lg:grid-cols-[1fr_320px] gap-6">
+    <div class="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6">
         <div class="space-y-6 min-w-0">
             @if ($log->last_discussion)
                 <div class="card card-pad"><div class="section-title mb-2">What was discussed last time</div><p class="whitespace-pre-line">{{ $log->last_discussion }}</p></div>
@@ -45,7 +45,7 @@
                     <div class="text-muted">{{ $log->followUp->due_date->format('d M Y') }} · {{ status_label($log->followUp->status) }}</div>
                 </div>
             @endif
-            <x-action :url="route('document-logs.destroy', $log)" method="DELETE" confirm="Delete this log?" class="btn btn-ghost btn-sm w-full hover:text-red-600"><x-icon name="trash-2" /> Delete log</x-action>
+            <x-action :url="route('document-logs.destroy', $log)" method="DELETE" confirm="Delete this log?" class="btn btn-ghost btn-sm w-full hover:text-red-fg"><x-icon name="trash-2" /> Delete log</x-action>
         </aside>
     </div>
 </x-layouts.app>

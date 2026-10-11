@@ -30,7 +30,7 @@
     @switch($tab)
         @case('salary')
             @if ($canSeeSalary)
-                <div class="grid lg:grid-cols-[1fr_320px] gap-6">
+                <div class="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6">
                     <div class="space-y-6">
                         <div class="card overflow-x-auto">
                             <div class="px-5 pt-5 pb-3 card-title">Salary revisions</div>
@@ -146,7 +146,7 @@
                                 <div class="font-medium">{{ \App\Models\EmployeeLeave::TYPES[$l->leave_type] ?? $l->leave_type }} · {{ $l->days() }} day(s)</div>
                                 <div class="text-xs text-muted">{{ $l->start_date->format('d M') }} – {{ $l->end_date->format('d M Y') }}{{ $l->reason ? ' · '.$l->reason : '' }}</div>
                             </div>
-                            <x-action :url="route('leaves.destroy', $l)" method="DELETE" confirm="Remove this leave?" class="btn btn-icon !size-7 hover:text-red-600"><x-icon name="trash-2" /></x-action>
+                            <x-action :url="route('leaves.destroy', $l)" method="DELETE" confirm="Remove this leave?" class="btn btn-icon !size-7 hover:text-red-fg"><x-icon name="trash-2" /></x-action>
                         </div>
                     @empty
                         <p class="px-5 pb-5 text-[13px] text-muted">No leaves recorded.</p>

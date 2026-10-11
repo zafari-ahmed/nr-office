@@ -38,6 +38,7 @@ Route::middleware('auth')->group(function () {
     | M0 Foundation: search, notifications, files
     */
     Route::get('/search', SearchController::class)->name('search');
+    Route::view('/reports', 'reports.index')->name('reports.index');
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
     Route::post('/notifications/read-all', [NotificationController::class, 'readAll'])->name('notifications.read-all');
     Route::get('/notifications/{id}', [NotificationController::class, 'open'])->name('notifications.open');
