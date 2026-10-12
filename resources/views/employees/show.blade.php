@@ -5,7 +5,15 @@
     @endphp
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div class="flex items-center gap-4">
-            <x-avatar :name="$employee->full_name" :src="$employee->photoUrl()" size="size-16 text-lg" />
+            <form method="POST" action="{{ route('employees.photo.update', $employee) }}" enctype="multipart/form-data" class="relative group shrink-0">
+                @csrf
+                <label class="block cursor-pointer rounded-full" title="{{ $employee->photo_path ? 'Change photo' : 'Upload photo' }}">
+                    <x-avatar :name="$employee->full_name" :src="$employee->photoUrl()" size="size-16 text-lg" />
+                    <span class="absolute inset-0 grid place-items-center rounded-full bg-gray-900/45 text-white opacity-0 group-hover:opacity-100 transition"><x-icon name="camera" class="size-5" /></span>
+                    <span class="absolute -bottom-0.5 -right-0.5 grid place-items-center size-6 rounded-full bg-surface border border-line text-ink-2 shadow-sm"><x-icon name="camera" class="size-3.5" /></span>
+                    <input type="file" name="photo" accept="image/jpeg,image/png,image/webp" class="sr-only" onchange="this.form.submit()">
+                </label>
+            </form>
             <div>
                 <div class="flex flex-wrap items-center gap-2">
                     <h1 class="text-[22px] font-semibold">{{ $employee->full_name }}</h1>

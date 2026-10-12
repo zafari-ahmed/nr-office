@@ -84,7 +84,8 @@ class Employee extends Model
 
     public function photoUrl(): ?string
     {
-        return $this->photo_path ? Storage::disk('public')->url($this->photo_path) : null;
+        // Served through the app so photos work without `php artisan storage:link`; ?v= busts the cache after a change.
+        return $this->photo_path ? route('employees.photo', [$this, 'v' => $this->updated_at?->timestamp]) : null;
     }
 
     public function scopeActive($query)

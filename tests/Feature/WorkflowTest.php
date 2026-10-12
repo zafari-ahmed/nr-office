@@ -221,6 +221,29 @@ class WorkflowTest extends TestCase
         $this->assertCount(1, Employee::first()->salaries);
     }
 
+    public function test_employee_photo_can_be_uploaded_changed_and_removed(): void
+    {
+        \Illuminate\Support\Facades\Storage::fake('public');
+        $file = fn () => \Illuminate\Http\UploadedFile::fake()->image('me.jpg', 200, 200);
+
+        $this->post('/employees', ['full_name' => 'Ahmed Raza', 'employment_type' => 'permanent', 'status' => 'active', 'photo' => $file()])->assertRedirect();
+        $emp = Employee::first();
+        $first = $emp->photo_path;
+        \Illuminate\Support\Facades\Storage::disk('public')->assertExists($first);
+        $this->get($emp->photoUrl())->assertOk();
+
+        // Replace from the profile page; the old file is removed.
+        $this->post("/employees/{$emp->id}/photo", ['photo' => $file()])->assertSessionHasNoErrors();
+        \Illuminate\Support\Facades\Storage::disk('public')->assertMissing($first);
+        $this->assertNotNull($emp->fresh()->photo_path);
+
+        $this->post("/employees/{$emp->id}/photo", ['photo' => \Illuminate\Http\UploadedFile::fake()->create('cv.pdf', 10, 'application/pdf')])->assertSessionHasErrors('photo');
+
+        $this->delete("/employees/{$emp->id}/photo");
+        $this->assertNull($emp->fresh()->photo_path);
+        $this->assertNull($emp->fresh()->photoUrl());
+    }
+
     public function test_settings_are_saved(): void
     {
         $this->put('/settings/rotation', ['rotation' => ['default_stay_days' => 10, 'remind_days_before' => 3, 'overdue_reminder_every_days' => 2, 'count_weekends' => '0']])->assertSessionHasNoErrors();

@@ -73,6 +73,9 @@ class EmployeeController extends Controller
     {
         $data = $this->validated($request, $employee);
         $employee->update(collect($data)->except('photo', 'basic_salary')->all());
+        if ($request->boolean('remove_photo') && ! $request->hasFile('photo')) {
+            $this->deletePhoto($employee);
+        }
         $this->savePhoto($request, $employee);
 
         return redirect()->route('employees.show', $employee)->with('success', 'Employee updated.');
@@ -93,13 +96,44 @@ class EmployeeController extends Controller
         return redirect()->route('employees.index')->with('success', 'Employee archived.');
     }
 
+    public function photo(Employee $employee)
+    {
+        abort_unless($employee->photo_path && Storage::disk('public')->exists($employee->photo_path), 404);
+
+        return Storage::disk('public')->response($employee->photo_path, null, ['Cache-Control' => 'private, max-age=31536000']);
+    }
+
+    /** Upload or replace the photo straight from the profile page. */
+    public function updatePhoto(Request $request, Employee $employee)
+    {
+        $request->validate(['photo' => self::PHOTO_RULES], ['photo.max' => 'The photo must be 4 MB or smaller.']);
+        $this->savePhoto($request, $employee);
+
+        return back()->with('success', 'Photo updated.');
+    }
+
+    public function destroyPhoto(Employee $employee)
+    {
+        $this->deletePhoto($employee);
+
+        return back()->with('success', 'Photo removed.');
+    }
+
+    private const PHOTO_RULES = ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'];
+
     private function savePhoto(Request $request, Employee $employee): void
     {
         if ($request->hasFile('photo')) {
-            if ($employee->photo_path) {
-                Storage::disk('public')->delete($employee->photo_path);
-            }
+            $this->deletePhoto($employee);
             $employee->update(['photo_path' => $request->file('photo')->store('employees/photos', 'public')]);
+        }
+    }
+
+    private function deletePhoto(Employee $employee): void
+    {
+        if ($employee->photo_path) {
+            Storage::disk('public')->delete($employee->photo_path);
+            $employee->update(['photo_path' => null]);
         }
     }
 
@@ -127,8 +161,8 @@ class EmployeeController extends Controller
             'status' => ['required', Rule::in(array_keys(Employee::STATUSES))],
             'rotation_order' => ['nullable', 'integer', 'min:1'],
             'notes' => ['nullable', 'string', 'max:5000'],
-            'photo' => ['nullable', 'image', 'max:4096'],
-        ], ['cnic.regex' => 'CNIC must look like 35202-1234567-1.']);
+            'photo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
+        ], ['cnic.regex' => 'CNIC must look like 35202-1234567-1.', 'photo.max' => 'The photo must be 4 MB or smaller.']);
 
         $data['is_site_staff'] = $request->boolean('is_site_staff');
         $data['basic_salary'] ??= 0;

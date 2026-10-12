@@ -37,11 +37,29 @@
             </div>
         </div>
         <div class="space-y-6">
-            <div class="card card-pad space-y-4">
-                <h2 class="card-title">Photo</h2>
-                <x-avatar :name="$employee->full_name ?? ''" :src="$employee->photoUrl()" size="size-20 text-xl" />
-                <input type="file" name="photo" accept="image/*" class="text-sm">
-                @error('photo')<p class="error">{{ $message }}</p>@enderror
+            <div class="card card-pad" x-data="{ preview: @js($employee->photoUrl()), removed: false,
+                    pick(e) { const f = e.target.files[0]; if (f) { this.preview = URL.createObjectURL(f); this.removed = false } },
+                    clear() { this.$refs.file.value = ''; this.preview = null; this.removed = true } }">
+                <h2 class="card-title mb-4">Photo</h2>
+                <div class="flex items-center gap-4">
+                    <button type="button" class="relative group shrink-0 rounded-full" @click="$refs.file.click()" aria-label="Choose photo">
+                        <template x-if="preview"><img :src="preview" alt="" class="size-20 rounded-full object-cover border border-line"></template>
+                        <template x-if="!preview">
+                            <span class="grid place-items-center size-20 rounded-full border-2 border-dashed border-line text-muted group-hover:border-accent group-hover:text-accent transition"><x-icon name="camera" class="size-6" /></span>
+                        </template>
+                        <span x-show="preview" class="absolute inset-0 grid place-items-center rounded-full bg-gray-900/45 text-white opacity-0 group-hover:opacity-100 transition"><x-icon name="camera" class="size-5" /></span>
+                    </button>
+                    <div class="space-y-1.5">
+                        <div class="flex flex-wrap gap-2">
+                            <button type="button" class="btn btn-secondary btn-sm" @click="$refs.file.click()"><x-icon name="upload" /> <span x-text="preview ? 'Change photo' : 'Upload photo'"></span></button>
+                            <button type="button" x-show="preview" class="btn btn-ghost btn-sm text-red-fg" @click="clear()">Remove</button>
+                        </div>
+                        <p class="text-[12px] text-muted">JPG, PNG or WebP, up to 4 MB.</p>
+                    </div>
+                </div>
+                <input type="file" name="photo" accept="image/jpeg,image/png,image/webp" class="hidden" x-ref="file" @change="pick">
+                <input type="hidden" name="remove_photo" :value="removed ? 1 : 0">
+                @error('photo')<p class="error mt-2">{{ $message }}</p>@enderror
             </div>
             <div class="card card-pad space-y-4">
                 <h2 class="card-title">Salary & bank</h2>

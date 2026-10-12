@@ -110,6 +110,9 @@ Route::middleware('auth')->group(function () {
     | M8 Employees
     */
     Route::resource('employees', EmployeeController::class);
+    Route::get('/employees/{employee}/photo', [EmployeeController::class, 'photo'])->name('employees.photo');
+    Route::post('/employees/{employee}/photo', [EmployeeController::class, 'updatePhoto'])->name('employees.photo.update');
+    Route::delete('/employees/{employee}/photo', [EmployeeController::class, 'destroyPhoto'])->name('employees.photo.destroy');
     Route::post('/employees/{employee}/salaries', [EmployeeSalaryController::class, 'store'])->name('salaries.store')->middleware('role:admin,accounts');
     Route::post('/employees/{employee}/leaves', [EmployeeLeaveController::class, 'store'])->name('leaves.store');
     Route::delete('/leaves/{leave}', [EmployeeLeaveController::class, 'destroy'])->name('leaves.destroy');
