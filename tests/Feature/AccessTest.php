@@ -123,4 +123,38 @@ class AccessTest extends TestCase
         $this->put('/projects/'.$project->id, ['name' => $project->name, 'status' => $project->status, 'team' => $ids])->assertSessionHasNoErrors();
         $this->assertEqualsCanonicalizing($ids, $project->members()->pluck('employees.id')->all());
     }
+
+    public function test_an_employee_can_be_given_a_login_from_their_profile(): void
+    {
+        $this->actingAs(User::where('role', 'admin')->first());
+        $employee = Employee::whereDoesntHave('user')->where('status', 'active')->first();
+        $base = ['full_name' => $employee->full_name, 'employment_type' => 'permanent', 'status' => 'active'];
+
+        $this->get('/employees/'.$employee->id.'/edit')->assertOk()->assertSee('Can sign in to the app');
+        $this->put('/employees/'.$employee->id, [...$base, 'login_enabled' => 1, 'login_email' => 'new.staff@nr.pk', 'login_role' => 'staff'])
+            ->assertSessionHasErrors('login_password');
+        $this->put('/employees/'.$employee->id, [...$base, 'login_enabled' => 1, 'login_email' => 'new.staff@nr.pk', 'login_role' => 'staff', 'login_password' => 'secret123'])
+            ->assertSessionHasNoErrors();
+        $user = $employee->user()->first();
+        $this->assertSame('new.staff@nr.pk', $user->email);
+        $this->assertTrue($user->is_active && Hash::check('secret123', $user->password));
+
+        // Switching it off, or the employee leaving, stops them signing in.
+        $this->put('/employees/'.$employee->id, [...$base, 'login_enabled' => 0])->assertSessionHasNoErrors();
+        $this->assertFalse($user->fresh()->is_active);
+        $this->put('/employees/'.$employee->id, [...$base, 'login_enabled' => 1, 'login_email' => 'new.staff@nr.pk', 'login_role' => 'staff'])->assertSessionHasNoErrors();
+        $this->assertTrue($user->fresh()->is_active);
+        $this->put('/employees/'.$employee->id, [...$base, 'status' => 'resigned'])->assertSessionHasNoErrors();
+        $this->assertFalse($user->fresh()->is_active);
+    }
+
+    public function test_a_new_staff_user_gets_an_employee_profile(): void
+    {
+        $this->actingAs(User::where('role', 'admin')->first());
+        $this->post('/settings/users', ['name' => 'Bilal Khan', 'email' => 'bilal@nr.pk', 'role' => 'staff', 'password' => 'secret123', 'is_active' => 1])
+            ->assertSessionHasNoErrors();
+        $user = User::where('email', 'bilal@nr.pk')->first();
+        $this->assertNotNull($user->employee_id);
+        $this->assertSame('Bilal Khan', $user->employee->full_name);
+    }
 }

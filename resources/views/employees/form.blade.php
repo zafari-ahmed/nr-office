@@ -71,6 +71,28 @@
                 <x-field label="Bank" name="bank_name" :value="$employee->bank_name" placeholder="Meezan Bank" />
                 <x-field label="Account / IBAN" name="bank_account_no" :value="$employee->bank_account_no" />
             </div>
+            @can('users.manage')
+                @php $login = $employee->user; $locked = $login?->isAdmin() && ! auth()->user()->isAdmin(); @endphp
+                <div class="card card-pad space-y-4" x-data="{ on: {{ old('login_enabled', $login?->is_active ? 1 : 0) ? 'true' : 'false' }} }">
+                    <div>
+                        <h2 class="card-title">App login</h2>
+                        <p class="text-[12.5px] text-ink-2 mt-0.5">Lets this employee sign in. Staff see only their own profile, team projects and their own expenses.</p>
+                    </div>
+                    @if ($locked)
+                        <p class="text-[13px] text-muted">Signs in as {{ $login->email }} (Owner / Admin). Only an Admin can change this login.</p>
+                    @else
+                        <label class="flex items-center gap-2 text-sm"><input type="hidden" name="login_enabled" value="0"><input type="checkbox" name="login_enabled" value="1" class="checkbox" x-model="on"> Can sign in to the app</label>
+                        <template x-if="on">
+                            <div class="space-y-4">
+                                <x-field label="Login email" name="login_email" type="email" :value="$login?->email ?? $employee->email" required hint="Usually their work email" />
+                                <x-field label="Role" name="login_role" :options="auth()->user()->isAdmin() ? \App\Models\User::ROLES : array_diff_key(\App\Models\User::ROLES, ['admin' => 1])" :value="$login?->role ?? 'staff'" required />
+                                <x-field :label="$login ? 'New password' : 'Password'" name="login_password" type="password" :required="! $login" :hint="$login ? 'Leave blank to keep their current password' : 'At least 8 characters. Share it with them; they can change it from their profile.'" autocomplete="new-password" />
+                            </div>
+                        </template>
+                        @if ($login && ! $login->is_active)<p class="text-[12.5px] text-muted" x-show="!on">Login {{ $login->email }} is switched off.</p>@endif
+                    @endif
+                </div>
+            @endcan
             <x-field label="Notes" name="notes" type="textarea" rows="3" :value="$employee->notes" />
             <div class="flex justify-end gap-2">
                 <a href="{{ $employee->exists ? route('employees.show', $employee) : route('employees.index') }}" class="btn btn-secondary">Cancel</a>

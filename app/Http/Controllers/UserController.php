@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Employee;
 use App\Models\User;
+use App\Support\Numbering;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
@@ -26,15 +27,17 @@ class UserController extends Controller
 
     public function store(Request $request)
     {
-        User::create($this->validated($request));
+        $data = $this->validated($request);
+        $user = User::create($data);
+        $made = $this->ensureEmployee($user);
 
-        return redirect()->route('settings.users.index')->with('success', 'User created.');
+        return redirect()->route('settings.users.index')->with('success', $made ? 'User created, with an employee profile.' : 'User created.');
     }
 
     public function edit(Request $request, User $user)
     {
         $this->ensureCanTouch($request, $user);
-        return view('settings.user-form', ['user' => $user, ...$this->formData()]);
+        return view('settings.user-form', ['user' => $user, ...$this->formData($user)]);
     }
 
     public function update(Request $request, User $user)
@@ -46,6 +49,7 @@ class UserController extends Controller
         }
         abort_if($user->is($request->user()) && ($data['role'] !== 'admin' || ! $data['is_active']) && $user->isAdmin(), 422, 'You cannot remove your own admin access.');
         $user->update($data);
+        $this->ensureEmployee($user);
 
         return redirect()->route('settings.users.index')->with('success', 'User updated.');
     }
@@ -65,11 +69,28 @@ class UserController extends Controller
         abort_if($user->isAdmin() && ! $request->user()->isAdmin(), 403, 'Only an Admin can change Admin accounts.');
     }
 
-    private function formData(): array
+    /** Staff are employees: a Staff login without an employee record gets one, so they have a profile, salary and team projects. */
+    private function ensureEmployee(User $user): bool
+    {
+        if ($user->role !== 'staff' || $user->employee_id) {
+            return false;
+        }
+        $employee = Employee::create([
+            'employee_code' => Numbering::employee(), 'full_name' => $user->name, 'email' => $user->email, 'phone' => $user->phone,
+            'employment_type' => 'permanent', 'status' => 'active', 'joining_date' => today(), 'basic_salary' => 0,
+        ]);
+        $user->update(['employee_id' => $employee->id]);
+
+        return true;
+    }
+
+    private function formData(?User $user = null): array
     {
         return [
             'roles' => auth()->user()->isAdmin() ? User::ROLES : array_diff_key(User::ROLES, ['admin' => 1]),
-            'employees' => Employee::active()->orderBy('full_name')->get(['id', 'full_name']),
+            // Each employee has at most one login.
+            'employees' => Employee::active()->where(fn ($q) => $q->whereDoesntHave('user')->when($user?->employee_id, fn ($w, $id) => $w->orWhere('id', $id)))
+                ->orderBy('full_name')->get(['id', 'full_name']),
             'sections' => SettingsController::SECTIONS,
             'section' => 'users',
         ];
@@ -83,7 +104,7 @@ class UserController extends Controller
             'phone' => ['nullable', 'string', 'max:30'],
             // Only an Admin can make someone an Admin.
             'role' => ['required', Rule::in(array_keys($request->user()->isAdmin() ? User::ROLES : array_diff_key(User::ROLES, ['admin' => 1])))],
-            'employee_id' => ['nullable', 'exists:employees,id'],
+            'employee_id' => ['nullable', 'exists:employees,id', Rule::unique('users')->ignore($user)],
             'password' => [$user ? 'nullable' : 'required', Password::min(8)],
         ]);
         $data['is_active'] = $request->boolean('is_active');

@@ -3,11 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Models\Employee;
+use App\Models\User;
 use App\Support\Activity;
 use App\Support\Numbering;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Password;
 
 class EmployeeController extends Controller
 {
@@ -43,8 +45,9 @@ class EmployeeController extends Controller
     {
         $data = $this->validated($request);
         $data['employee_code'] = Numbering::employee();
-        $employee = Employee::create(collect($data)->except('photo')->all());
+        $employee = Employee::create(collect($data)->except('photo', 'login')->all());
         $this->savePhoto($request, $employee);
+        $this->syncLogin($request, $employee, $data['login'] ?? null);
         if ($employee->basic_salary > 0) {
             $employee->salaries()->create([
                 'effective_from' => $employee->joining_date ?? today(), 'basic_salary' => $employee->basic_salary,
@@ -71,13 +74,16 @@ class EmployeeController extends Controller
 
     public function edit(Employee $employee)
     {
+        $employee->load('user');
+
         return view('employees.form', compact('employee'));
     }
 
     public function update(Request $request, Employee $employee)
     {
         $data = $this->validated($request, $employee);
-        $employee->update(collect($data)->except('photo', 'basic_salary')->all());
+        $employee->update(collect($data)->except('photo', 'basic_salary', 'login')->all());
+        $this->syncLogin($request, $employee, $data['login'] ?? null);
         if ($request->boolean('remove_photo') && ! $request->hasFile('photo')) {
             $this->deletePhoto($employee);
         }
@@ -154,6 +160,62 @@ class EmployeeController extends Controller
         }
     }
 
+    /**
+     * Login details from the employee form ("Can sign in"). Null when the person editing can't manage users,
+     * otherwise ['enabled' => bool, ...]. An employee and their login are one person: staff sign in as their employee record.
+     */
+    private function validatedLogin(Request $request, ?Employee $employee): ?array
+    {
+        if (! $request->user()->hasPermission('users.manage') || ! $request->has('login_enabled')) {
+            return null;
+        }
+        $user = $employee?->user;
+        if ($user?->isAdmin() && ! $request->user()->isAdmin()) {
+            return null; // Only an Admin can change Admin accounts.
+        }
+        if (! $request->boolean('login_enabled')) {
+            return ['enabled' => false];
+        }
+        $roles = $request->user()->isAdmin() ? User::ROLES : array_diff_key(User::ROLES, ['admin' => 1]);
+        $login = $request->validate([
+            'login_email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user)],
+            'login_role' => ['required', Rule::in(array_keys($roles))],
+            'login_password' => [$user ? 'nullable' : 'required', Password::min(8)],
+        ], ['login_email.required' => 'Enter the email they will sign in with.', 'login_password.required' => 'Set a password for their first sign-in.']);
+
+        return ['enabled' => true, 'email' => $login['login_email'], 'role' => $login['login_role'], 'password' => $login['login_password'] ?? null];
+    }
+
+    private function syncLogin(Request $request, Employee $employee, ?array $login): void
+    {
+        $user = $employee->user()->first();
+        $current = $employee->status === 'active';
+
+        if ($login === null) {
+            // No login changes from this form; still keep the name, phone and access in step with the employee.
+            $user?->update(['name' => $employee->full_name, 'phone' => $employee->phone] + ($current || $user->is($request->user()) ? [] : ['is_active' => false]));
+
+            return;
+        }
+        if (! $login['enabled']) {
+            if ($user && ! $user->is($request->user())) {
+                $user->update(['is_active' => false]);
+            }
+
+            return;
+        }
+        $fields = ['name' => $employee->full_name, 'phone' => $employee->phone, 'email' => $login['email'], 'role' => $login['role'], 'is_active' => $current]
+            + ($login['password'] ? ['password' => $login['password']] : []);
+        if ($user) {
+            if ($user->is($request->user())) {
+                unset($fields['role'], $fields['is_active']); // Never lock yourself out from here.
+            }
+            $user->update($fields);
+        } else {
+            User::create([...$fields, 'employee_id' => $employee->id]);
+        }
+    }
+
     private function validated(Request $request, ?Employee $employee = null): array
     {
         $data = $request->validate([
@@ -183,6 +245,7 @@ class EmployeeController extends Controller
 
         $data['is_site_staff'] = $request->boolean('is_site_staff');
         $data['basic_salary'] ??= 0;
+        $data['login'] = $this->validatedLogin($request, $employee);
 
         return $data;
     }
