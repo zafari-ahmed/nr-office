@@ -13,7 +13,7 @@ Status legend: ✅ built in this first PR · 🔜 next phase
 |---|---------|--------|
 | 0.1 | App shell: collapsible sidebar, top bar (search, + New menu, notification bell, avatar), mobile bottom tabs | ✅ |
 | 0.2 | Design system: colours, Inter type scale, buttons, inputs, status pills, cards, tables, drawers, toasts | ✅ |
-| 0.3 | Light / dark mode toggle (remembered per browser) | ✅ |
+| 0.3 | Light theme only (dark mode toggle removed at Zafar's request) | ✅ |
 | 0.4 | Login / logout, remember me | ✅ |
 | 0.5 | Roles: `admin`, `manager`, `accounts`, `staff` with route-level gates | ✅ |
 | 0.6 | Polymorphic file attachments (quotes, invoices, logs, expenses, employees, projects) | ✅ |
@@ -113,12 +113,11 @@ Status legend: ✅ built in this first PR · 🔜 next phase
 |---|---------|--------|
 | 10.1 | Company profile (name, address, phone, email, NTN, logo) | ✅ |
 | 10.2 | Users & roles | ✅ |
-| 10.3 | Rotation rules: default days on site, remind N days before, overdue reminder frequency, who gets notified | ✅ |
+| 10.3 | Rotation rules: default days on site, remind N days before, overdue reminder frequency, count weekends | ✅ |
 | 10.4 | Expense heads & budgets | ✅ |
 | 10.5 | Numbering prefixes | ✅ |
 | 10.6 | Taxes & currency | ✅ |
-| 10.7 | Notifications preferences | 🔜 |
-| 10.8 | Backup (DB dump download) | 🔜 |
+| 10.7 | Notifications: on/off and recipient roles per alert (overdue invoices, pending expenses, follow-ups, site returns, overdue from site, low stock daily/weekly) | ✅ |
 
 ## M11. Notifications
 | # | Feature | Status |
@@ -129,14 +128,14 @@ Status legend: ✅ built in this first PR · 🔜 next phase
 ## M12. Reports
 | # | Feature | Status |
 |---|---------|--------|
-| 12.0 | Reports page in the nav with the design's empty state | ✅ |
-| 12.1 | Report builder: expenses by head / month, income vs expense, project profitability, export PDF / Excel | 🔜 |
+| 12.0 | Reports page (admin, manager, accounts) with period filter (month, quarter, Jul–Jun financial year, calendar year, last 12 months, custom) | ✅ |
+| 12.1 | Six reports: income & expenses, expenses by head vs budget, outstanding invoices by age, project summary, site visits, inventory value. CSV export and print | ✅ |
 
 ---
 
 ## Phases
 1. **Phase 1 (this PR)** — Foundation, Projects hub, Quotations, Invoices, Document log, Expenses, Inventory, Employees, Site rotation, Settings, Dashboard.
-2. **Phase 2** — Server-side PDF + email sending, Reports + CSV export, backup, notification preferences, email/WhatsApp reminders.
+2. **Phase 2** — Server-side PDF + email sending, email/WhatsApp reminders.
 3. **Phase 3** — Polish from real use, permissions per action, mobile PWA.
 
 ## Setup

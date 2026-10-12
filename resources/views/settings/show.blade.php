@@ -33,10 +33,6 @@
                     <button class="btn btn-primary"><x-icon name="plus" /> Add</button>
                 </form>
             @elseif ($section === 'rotation')
-                @php
-                    $notify = explode(',', \App\Models\Setting::get('rotation.notify_roles'));
-                    $roleHints = ['admin' => 'overdue alerts and returns', 'manager' => 'for their projects', 'accounts' => 'travel and allowance follow-up', 'staff' => 'office staff with a login'];
-                @endphp
                 <form method="POST" action="{{ route('settings.update', 'rotation') }}" class="card overflow-hidden"
                       x-data="{ stay: {{ (int) \App\Models\Setting::get('rotation.default_stay_days') }}, remind: {{ (int) \App\Models\Setting::get('rotation.remind_days_before') }}, every: '{{ \App\Models\Setting::get('rotation.overdue_reminder_every_days') }}', weekends: {{ \App\Models\Setting::get('rotation.count_weekends', '1') === '1' ? 'true' : 'false' }},
                                fmt(d) { return d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }) },
@@ -68,17 +64,9 @@
                             @endforeach
                         </div>
                     </div>
-                    <div class="px-5 py-4 border-b border-line-2">
-                        <div class="text-[14px] font-medium">Who gets notified</div>
-                        <div class="text-[12.5px] text-muted">For return reminders and overdue alerts. The staff member on site is always reminded if they have a login.</div>
-                        <div class="mt-3 rounded-[10px] border border-line divide-y divide-line-2">
-                            @foreach ($roles as $k => $l)
-                                <label class="flex items-center justify-between gap-3 px-3.5 py-3 cursor-pointer">
-                                    <span><span class="block text-[13.5px] font-medium">{{ $l }}</span><span class="block text-[12px] text-muted">{{ $roleHolders[$k] ?? 'Nobody yet' }} · {{ $roleHints[$k] ?? '' }}</span></span>
-                                    <span class="switch"><input type="checkbox" name="rotation[notify_roles][]" value="{{ $k }}" @checked(in_array($k, $notify))><span></span></span>
-                                </label>
-                            @endforeach
-                        </div>
+                    <div class="flex flex-wrap items-center justify-between gap-3 px-5 py-4 border-b border-line-2">
+                        <div><div class="text-[14px] font-medium">Who gets reminded</div><div class="text-[12.5px] text-muted">Return reminders and overdue alerts are set up in Notifications.</div></div>
+                        <a href="{{ route('settings.show', 'notifications') }}" class="btn btn-secondary btn-sm"><x-icon name="bell" /> Notifications</a>
                     </div>
                     <label class="flex items-center justify-between gap-3 px-5 py-4 cursor-pointer">
                         <span><span class="block text-[14px] font-medium">Count weekends in stay length</span><span class="block text-[12.5px] text-muted">Turn off if staff don't work on site at weekends.</span></span>
@@ -90,6 +78,8 @@
                         <button class="btn btn-primary">Save changes</button>
                     </div>
                 </form>
+            @elseif ($section === 'notifications')
+                @include('settings._notifications')
             @else
                 <form method="POST" action="{{ route('settings.update', $section) }}" class="card overflow-hidden">
                     @csrf @method('PUT')

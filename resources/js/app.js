@@ -6,17 +6,6 @@ import { renderIcons } from './icons';
 
 window.Alpine = Alpine;
 
-/* Theme: remembered per browser, defaults to the OS preference. */
-Alpine.store('theme', {
-    dark: document.documentElement.classList.contains('dark'),
-    toggle() {
-        this.dark = !this.dark;
-        document.documentElement.classList.toggle('dark', this.dark);
-        try { localStorage.setItem('nr-theme', this.dark ? 'dark' : 'light'); } catch (e) {}
-        renderCharts();
-    },
-});
-
 /* Sidebar collapse, remembered per browser. */
 Alpine.store('sidebar', {
     collapsed: (() => { try { return localStorage.getItem('nr-sidebar') === '1'; } catch (e) { return false; } })(),

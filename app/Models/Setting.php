@@ -30,6 +30,17 @@ class Setting extends Model
         'rotation.overdue_reminder_every_days' => '1',
         'rotation.notify_roles' => 'admin,manager',
         'rotation.count_weekends' => '1',
+        'notify.invoice_overdue' => '1',
+        'notify.invoice_overdue_roles' => 'admin,accounts',
+        'notify.expense_pending' => '1',
+        'notify.expense_pending_roles' => 'admin,accounts',
+        'notify.follow_up_due' => '1',
+        'notify.follow_up_roles' => 'admin,manager',
+        'notify.rotation_return' => '1',
+        'notify.rotation_overdue' => '1',
+        'notify.low_stock' => '1',
+        'notify.low_stock_roles' => 'admin,manager',
+        'notify.low_stock_frequency' => 'weekly',
     ];
 
     public static function get(string $key, mixed $default = null): mixed

@@ -54,7 +54,12 @@ class PagesTest extends TestCase
         foreach (Project::pluck('id') as $id) {
             $urls[] = "/projects/{$id}";
         }
-        $urls[] = '/reports';
+        foreach (array_keys(\App\Http\Controllers\ReportController::REPORTS) as $report) {
+            $urls[] = "/reports?type={$report}";
+            $urls[] = "/reports?type={$report}&period=custom&from=2020-01-01&to=2030-12-31";
+        }
+        $urls[] = '/reports?type=pnl&period=this_month';
+        $urls[] = '/settings/notifications';
         $urls[] = '/rotation?schedule=1';
         $urls[] = '/invoices/'.Invoice::first()->id.'?pay=1';
         foreach (['overview', 'follow-ups', 'quotations', 'invoices', 'expenses', 'site-visits', 'files', 'notes'] as $tab) {
@@ -67,6 +72,20 @@ class PagesTest extends TestCase
         foreach ($urls as $url) {
             $this->get($url)->assertOk();
         }
+    }
+
+    public function test_reports_export_csv(): void
+    {
+        $csv = $this->get('/reports/export?type=projects')->assertOk()->streamedContent();
+        $this->assertStringStartsWith('Code,Project,Client', $csv);
+        $this->assertStringContainsString(Project::first()->code, $csv);
+    }
+
+    public function test_staff_cannot_open_reports(): void
+    {
+        $this->actingAs(User::where('role', 'staff')->first());
+        $this->get('/reports')->assertForbidden();
+        $this->get('/')->assertDontSee('Reports');
     }
 
     public function test_search_returns_json(): void

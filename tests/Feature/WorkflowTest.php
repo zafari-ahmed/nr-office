@@ -143,6 +143,12 @@ class WorkflowTest extends TestCase
         $this->artisan('nr:daily-reminders')->assertSuccessful();
         $this->assertSame(1, $this->admin->notifications()->count());
 
+        // Switched off in Settings → Notifications: no more overdue alerts.
+        Setting::put('notify.rotation_overdue', '0');
+        $visit->update(['last_overdue_reminder_at' => null]);
+        $this->artisan('nr:daily-reminders')->assertSuccessful();
+        $this->assertSame(1, $this->admin->notifications()->count());
+
         $this->patch("/rotation/{$visit->id}/return");
         $this->assertSame('returned', $visit->fresh()->status);
     }
@@ -217,10 +223,20 @@ class WorkflowTest extends TestCase
 
     public function test_settings_are_saved(): void
     {
-        $this->put('/settings/rotation', ['rotation' => ['default_stay_days' => 10, 'remind_days_before' => 3, 'overdue_reminder_every_days' => 2, 'notify_roles' => ['admin'], 'count_weekends' => '0']])->assertSessionHasNoErrors();
+        $this->put('/settings/rotation', ['rotation' => ['default_stay_days' => 10, 'remind_days_before' => 3, 'overdue_reminder_every_days' => 2, 'count_weekends' => '0']])->assertSessionHasNoErrors();
         $this->assertSame('10', Setting::get('rotation.default_stay_days'));
-        $this->assertSame('admin', Setting::get('rotation.notify_roles'));
         $this->assertSame('0', Setting::get('rotation.count_weekends'));
+        $this->assertSame('admin,manager', Setting::get('rotation.notify_roles'), 'Rotation rules no longer own the recipients');
+
+        $this->put('/settings/notifications', [
+            'notify' => ['invoice_overdue' => '0', 'expense_pending' => '1', 'follow_up_due' => '1', 'rotation_return' => '1', 'rotation_overdue' => '0', 'low_stock' => '1', 'low_stock_frequency' => 'daily', 'low_stock_roles' => ['admin', 'accounts']],
+            'rotation' => ['notify_roles' => ['admin']],
+        ])->assertSessionHasNoErrors();
+        $this->assertSame('0', Setting::get('notify.invoice_overdue'));
+        $this->assertSame('daily', Setting::get('notify.low_stock_frequency'));
+        $this->assertSame('admin,accounts', Setting::get('notify.low_stock_roles'));
+        $this->assertSame('', Setting::get('notify.follow_up_roles'));
+        $this->assertSame('admin', Setting::get('rotation.notify_roles'));
     }
 
     public function test_return_date_skips_weekends_when_they_are_not_counted(): void

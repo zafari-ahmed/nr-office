@@ -8,9 +8,11 @@
         ['Inventory', 'inventory.index', 'package', ['inventory.*'], 0, ''],
         ['Employees', 'employees.index', 'users', ['employees.*'], 0, ''],
         ['Site Rotation', 'rotation.index', 'calendar-range', ['rotation.*'], $shellOverdueVisits ?? 0, 'red'],
-        ['Reports', 'reports.index', 'bar-chart-3', ['reports.*'], 0, ''],
     ];
     $user = auth()->user();
+    if ($user->hasRole('admin', 'manager', 'accounts')) {
+        $nav[] = ['Reports', 'reports.index', 'bar-chart-3', ['reports.*'], 0, ''];
+    }
 @endphp
 <!DOCTYPE html>
 <html lang="en">
@@ -24,8 +26,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <script>
         try {
-            const t = localStorage.getItem('nr-theme');
-            if (t === 'dark' || (!t && matchMedia('(prefers-color-scheme: dark)').matches)) document.documentElement.classList.add('dark');
             // Apply the remembered sidebar width before first paint so pages don't shift on load.
             if (localStorage.getItem('nr-sidebar') === '1') document.documentElement.classList.add('sb-collapsed');
         } catch (e) {}
@@ -119,10 +119,6 @@
             </div>
 
             <div class="flex items-center gap-1.5 ml-auto">
-                <button class="btn btn-icon" @click="$store.theme.toggle()" title="Toggle theme">
-                    <x-icon name="moon" class="size-[18px] dark:hidden" />
-                    <x-icon name="sun" class="size-[18px] hidden dark:block" />
-                </button>
                 <div x-data="{ open: false }" class="relative">
                     <button class="btn btn-icon relative" @click="open = !open" title="Notifications">
                         <x-icon name="bell" class="size-[18px]" />

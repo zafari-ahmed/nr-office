@@ -18,6 +18,7 @@ use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ProjectFollowUpController;
 use App\Http\Controllers\ProjectNoteController;
 use App\Http\Controllers\QuotationController;
+use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\SiteVisitController;
@@ -38,7 +39,10 @@ Route::middleware('auth')->group(function () {
     | M0 Foundation: search, notifications, files
     */
     Route::get('/search', SearchController::class)->name('search');
-    Route::view('/reports', 'reports.index')->name('reports.index');
+    Route::middleware('role:admin,manager,accounts')->group(function () {
+        Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
+        Route::get('/reports/export', [ReportController::class, 'export'])->name('reports.export');
+    });
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
     Route::post('/notifications/read-all', [NotificationController::class, 'readAll'])->name('notifications.read-all');
     Route::get('/notifications/{id}', [NotificationController::class, 'open'])->name('notifications.open');

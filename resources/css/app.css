@@ -176,6 +176,10 @@
     /* Chips */
     .chip { @apply inline-flex items-center gap-1.5 h-[30px] px-3 rounded-full border border-line bg-surface text-[12.5px] font-medium text-ink-2 no-underline hover:text-ink hover:no-underline; }
     .chip-active { @apply bg-ink text-surface border-ink hover:text-surface; }
+    .chip-toggle { @apply cursor-pointer select-none; }
+    .chip-toggle input { @apply sr-only; }
+    .chip-toggle:has(input:checked) { @apply bg-accent/10 text-accent border-accent/40; }
+    .chip-toggle:has(input:focus-visible) { @apply ring-2 ring-accent/40; }
 
     /* Navigation */
     .nav-link { @apply relative flex items-center gap-2.5 h-9 px-2.5 rounded-lg text-[13.5px] font-normal text-ink-2 no-underline transition hover:bg-surface-2 hover:text-ink hover:no-underline; }
