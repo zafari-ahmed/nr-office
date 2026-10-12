@@ -101,6 +101,8 @@
     a { @apply text-accent; }
     ::placeholder { color: var(--muted); }
     [x-cloak] { display: none !important; }
+    /* Tailwind v4 resets buttons to the default cursor; every clickable control gets the hand. */
+    button:not(:disabled), [role="button"], summary, label:has(> input[type="checkbox"]), select { cursor: pointer; }
     h1, h2, h3 { @apply tracking-tight; }
     ::selection { background: var(--accent-soft); }
 }
