@@ -156,5 +156,8 @@ class AccessTest extends TestCase
         $user = User::where('email', 'bilal@nr.pk')->first();
         $this->assertNotNull($user->employee_id);
         $this->assertSame('Bilal Khan', $user->employee->full_name);
+
+        $this->post('/settings/users', ['name' => 'Sana Accounts', 'email' => 'sana@nr.pk', 'role' => 'accounts', 'password' => 'secret123', 'is_active' => 1]);
+        $this->assertNotNull(User::where('email', 'sana@nr.pk')->value('employee_id'));
     }
 }

@@ -10,7 +10,7 @@
                 <x-field label="Email" name="email" type="email" :value="$user->email" required />
                 <x-field label="Phone" name="phone" :value="$user->phone" />
                 <x-field label="Role" name="role" :options="$roles" :value="$user->role" required />
-                <x-field label="Employee profile" name="employee_id" :options="$employees->pluck('full_name', 'id')" blank="— New profile for Staff —" :value="$user->employee_id" hint="Staff are employees. Leave blank and a Staff user gets a new employee profile." />
+                <x-field label="Employee profile" name="employee_id" :options="$employees->pluck('full_name', 'id')" blank="— Create a new employee profile —" :value="$user->employee_id" hint="Every login is an employee. Leave blank to add them to Employees." />
             </div>
             <x-field label="{{ $user->exists ? 'New password' : 'Password' }}" name="password" type="password" :required="! $user->exists" :hint="$user->exists ? 'Leave blank to keep the current password' : 'At least 8 characters'" autocomplete="new-password" />
             <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="is_active" value="1" class="checkbox" @checked(old('is_active', $user->is_active ?? true))> Active (can sign in)</label>

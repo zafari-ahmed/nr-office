@@ -29,7 +29,7 @@ class UserController extends Controller
     {
         $data = $this->validated($request);
         $user = User::create($data);
-        $made = $this->ensureEmployee($user);
+        $made = $this->ensureEmployee($user, anyRole: true);
 
         return redirect()->route('settings.users.index')->with('success', $made ? 'User created, with an employee profile.' : 'User created.');
     }
@@ -69,10 +69,13 @@ class UserController extends Controller
         abort_if($user->isAdmin() && ! $request->user()->isAdmin(), 403, 'Only an Admin can change Admin accounts.');
     }
 
-    /** Staff are employees: a Staff login without an employee record gets one, so they have a profile, salary and team projects. */
-    private function ensureEmployee(User $user): bool
+    /**
+     * Logins are employees: a new user (any role) without an employee record gets one, so they have a profile, salary
+     * and team projects. Existing logins are only filled in for Staff, so an owner's account isn't turned into an employee unasked.
+     */
+    private function ensureEmployee(User $user, bool $anyRole = false): bool
     {
-        if ($user->role !== 'staff' || $user->employee_id) {
+        if ($user->employee_id || (! $anyRole && $user->role !== 'staff')) {
             return false;
         }
         $employee = Employee::create([
