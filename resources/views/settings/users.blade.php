@@ -2,7 +2,7 @@
     <x-page-header title="Settings" subtitle="Users & roles">
         <x-slot:actions><a href="{{ route('settings.users.create') }}" class="btn btn-primary"><x-icon name="user-plus" /> Add user</a></x-slot:actions>
     </x-page-header>
-    <div class="grid grid-cols-1 lg:grid-cols-[240px_1fr] gap-6">
+    <div class="grid grid-cols-1 lg:grid-cols-[230px_minmax(0,1fr)] gap-6">
         @include('settings._nav')
         <div class="space-y-4 min-w-0">
             <div class="card overflow-x-auto">

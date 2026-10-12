@@ -1,5 +1,5 @@
-<x-layouts.app title="Settings">
-    <x-page-header title="Settings" />
+<x-layouts.app :title="$sections[$section][0]">
+    <x-page-header title="Settings" :subtitle="$sections[$section][0]" />
     <div class="grid grid-cols-1 lg:grid-cols-[230px_minmax(0,1fr)] gap-6 max-w-[1120px]">
         @include('settings._nav')
         <div class="min-w-0">
