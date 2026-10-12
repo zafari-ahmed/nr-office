@@ -5,7 +5,7 @@
     @endphp
     <x-page-header title="Employees" :subtitle="$total.' people · '.$onSite.' on site today'">
         <x-slot:actions>
-            <a href="{{ route('employees.create') }}" class="btn btn-primary"><x-icon name="user-plus" /> Add employee</a>
+            @can('employees.manage')<a href="{{ route('employees.create') }}" class="btn btn-primary"><x-icon name="user-plus" /> Add employee</a>@endcan
         </x-slot:actions>
     </x-page-header>
 

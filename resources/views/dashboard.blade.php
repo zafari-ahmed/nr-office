@@ -13,25 +13,31 @@
     @endphp
 
     <x-page-header :eyebrow="now()->format('l, j F Y')" :title="$greeting.', '.strtok(auth()->user()->name, ' ')"
-                   :subtitle="$attentionCount ? $attentionCount.' '.str('thing')->plural($attentionCount).' need your attention today' : 'Nothing needs your attention today'">
+                   :subtitle="$attentionCount ? $attentionCount.' '.str('thing')->plural($attentionCount).($attentionCount === 1 ? ' needs' : ' need').' your attention today' : 'Nothing needs your attention today'">
         <x-slot:actions>
-            <a href="{{ route('rotation.index', ['schedule' => 1]) }}" class="btn btn-secondary"><x-icon name="map-pin" /> Schedule visit</a>
-            <a href="{{ route('quotations.create') }}" class="btn btn-primary"><x-icon name="file-plus" /> New quotation</a>
+            @can('rotation.manage')<a href="{{ route('rotation.index', ['schedule' => 1]) }}" class="btn btn-secondary"><x-icon name="map-pin" /> Schedule visit</a>@endcan
+            @can('quotations.manage')<a href="{{ route('quotations.create') }}" class="btn btn-primary"><x-icon name="file-plus" /> New quotation</a>@endcan
         </x-slot:actions>
     </x-page-header>
 
     {{-- Stat cards --}}
-    <div class="grid grid-cols-2 lg:grid-cols-5 gap-3.5">
+    <div class="grid grid-cols-2 lg:grid-flow-col lg:auto-cols-fr gap-3.5">
         <x-stat label="Active projects" :value="$stats['active_projects']" icon="folder-kanban" :href="route('projects.index', ['status' => 'active'])"
                 :hint="$stats['leads'].' '.str('lead')->plural($stats['leads']).' in pipeline'" />
+        @can('quotations.view')
         <x-stat label="Quotations pending" :value="$stats['quotes_pending']" icon="file-text" :href="route('quotations.index', ['status' => 'sent'])"
                 :hint="$cur.' '.money_short($stats['quotes_pending_value']).' awaiting reply'" />
+        @endcan
+        @can('invoices.view')
         <x-stat label="Unpaid invoices" :value="$cur.' '.money_short($stats['unpaid_amount'])" icon="receipt" :href="route('invoices.index', ['status' => 'overdue'])"
                 :hint="$stats['overdue_invoices'] ? $stats['overdue_invoices'].' overdue' : $stats['unpaid_count'].' open'" :tone="$stats['overdue_invoices'] ? 'red' : null" />
-        <x-stat label="Expenses this month" :value="$cur.' '.money_short($stats['expenses_this_month'])" icon="wallet" :href="route('expenses.index')"
+        @endcan
+        <x-stat :label="auth()->user()->hasPermission('expenses.view_all') ? 'Expenses this month' : 'My expenses this month'" :value="$cur.' '.money_short($stats['expenses_this_month'])" icon="wallet" :href="route('expenses.index')"
                 :trend="$stats['expenses_change']" :hint="'vs '.$cur.' '.money_short($stats['expenses_last_month']).' in '.$lastMonthName" :tone="($stats['expenses_change'] ?? 0) > 0 ? 'red' : 'green'" />
+        @can('rotation.view')
         <x-stat label="Staff on site today" :value="$stats['on_site'].' / '.$stats['field_staff']" icon="hard-hat" :href="route('rotation.index')" class="col-span-2 lg:col-span-1"
                 :hint="$stats['on_site_overdue'].' overdue · '.$stats['on_site_soon'].' back soon'" :tone="$stats['on_site_overdue'] ? 'amber' : null" />
+        @endcan
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-[1.45fr_1fr] gap-4 mt-5 items-start">
@@ -97,6 +103,7 @@
     </div>
 
     {{-- On site now --}}
+    @can('rotation.view')
     <div class="card mt-5 px-[18px] py-4">
         <div class="flex items-center gap-2 mb-3">
             <span class="size-2 rounded-full bg-blue-fg"></span>
@@ -128,7 +135,10 @@
         @endif
     </div>
 
+    @endcan
+
     {{-- Charts --}}
+    @can('dashboard.finance')
     <div class="grid lg:grid-cols-2 gap-4 mt-5">
         <div class="card px-[18px] py-4">
             <div class="flex items-baseline gap-2"><h2 class="card-title">Expenses by head</h2><span class="text-[12.5px] text-muted">Last 6 months</span></div>
@@ -139,6 +149,8 @@
             <div class="h-64 mt-2"><canvas data-chart="{{ json_encode($lineChart) }}"></canvas></div>
         </div>
     </div>
+
+    @endcan
 
     {{-- Recent activity --}}
     <div class="card mt-5 overflow-hidden">

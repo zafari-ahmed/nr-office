@@ -1,5 +1,6 @@
 <nav class="space-y-0.5 self-start">
-    @foreach ($sections as $key => [$label, $icon])
-        <a href="{{ $key === 'users' ? route('settings.users.index') : route('settings.show', $key) }}" @class(['nav-link', 'nav-active' => $section === $key])><x-icon :name="$icon" />{{ $label }}</a>
+    @foreach (\App\Http\Controllers\SettingsController::SECTIONS as $key => [$label, $icon])
+        @continue(! \App\Http\Controllers\SettingsController::allowed(auth()->user(), $key))
+        <a href="{{ \App\Http\Controllers\SettingsController::url($key) }}" @class(['nav-link', 'nav-active' => ($section ?? null) === $key])><x-icon :name="$icon" />{{ $label }}</a>
     @endforeach
 </nav>

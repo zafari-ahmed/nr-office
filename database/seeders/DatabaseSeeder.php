@@ -227,6 +227,8 @@ class DatabaseSeeder extends Seeder
                 'actual_return_date' => $status === 'returned' ? $dep->copy()->addDays($days) : null, 'status' => $status,
                 'purpose' => 'Site supervision', 'created_by' => $admin->id,
             ]);
+            // Whoever goes to a site is on that project's team.
+            $projects[$pi]->members()->syncWithoutDetaching([$employees[$ei]->id]);
         }
 
         // A little recent activity

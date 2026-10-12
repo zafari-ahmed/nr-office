@@ -35,6 +35,25 @@
                     <x-field label="End" name="end_date" type="date" :value="$project->end_date" />
                 </div>
             </div>
+            @php $teamIds = collect(old('team', $project->exists ? $project->members()->pluck('employees.id')->all() : []))->map(fn ($id) => (int) $id)->all(); @endphp
+            <div class="card overflow-hidden" x-data="{ q: '' }">
+                <div class="px-[18px] pt-4 pb-3">
+                    <h2 class="card-title">Team</h2>
+                    <p class="text-[12.5px] text-muted mt-0.5">Staff on the team can open this project, add notes, follow-ups and files.</p>
+                    <input x-model="q" placeholder="Search staff" class="input !h-8 mt-3 text-[13px]" aria-label="Search staff">
+                </div>
+                <div class="max-h-72 overflow-y-auto border-t border-line divide-y divide-line-2">
+                    @forelse ($employees as $e)
+                        <label class="flex items-center gap-2.5 px-[18px] py-2 cursor-pointer hover:bg-surface-2" x-show="!q || @js(mb_strtolower($e->full_name.' '.$e->designation)).includes(q.toLowerCase())">
+                            <input type="checkbox" name="team[]" value="{{ $e->id }}" class="checkbox" @checked(in_array($e->id, $teamIds, true))>
+                            <x-avatar :name="$e->full_name" :src="$e->photoUrl()" size="size-7 text-[10.5px]" />
+                            <span class="min-w-0 leading-tight"><span class="block text-[13px] font-medium truncate">{{ $e->full_name }}</span><span class="block text-[11.5px] text-muted truncate">{{ $e->designation }}</span></span>
+                        </label>
+                    @empty
+                        <p class="px-[18px] py-3 text-[13px] text-muted">No active employees yet.</p>
+                    @endforelse
+                </div>
+            </div>
             <div class="flex gap-2 justify-end">
                 <a href="{{ $project->exists ? route('projects.show', $project) : route('projects.index') }}" class="btn btn-secondary">Cancel</a>
                 <button class="btn btn-primary"><x-icon name="check" /> {{ $project->exists ? 'Save changes' : 'Create project' }}</button>

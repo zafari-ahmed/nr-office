@@ -15,14 +15,15 @@ class ExpenseController extends Controller
 {
     public function index(Request $request)
     {
+        $user = $request->user();
         $month = $request->query('month') ? Carbon::parse($request->query('month').'-01') : today()->startOfMonth();
         $range = [$month->copy()->startOfMonth(), $month->copy()->endOfMonth()];
 
         $heads = ExpenseHead::where('is_active', true)->orderBy('sort_order')
-            ->withSum(['expenses as spent' => fn ($q) => $q->where('status', 'approved')->whereBetween('expense_date', $range)], 'amount')
+            ->withSum(['expenses as spent' => fn ($q) => $q->visibleTo($user)->where('status', 'approved')->whereBetween('expense_date', $range)], 'amount')
             ->get();
 
-        $expenses = Expense::with('head', 'project', 'employee', 'attachments', 'creator')
+        $expenses = Expense::visibleTo($user)->with('head', 'project', 'employee', 'attachments', 'creator')
             ->whereBetween('expense_date', $range)
             ->when($request->head, fn ($q, $h) => $q->where('expense_head_id', $h))
             ->when($request->status, fn ($q, $s) => $q->where('status', $s))
@@ -33,23 +34,26 @@ class ExpenseController extends Controller
             'heads' => $heads,
             'expenses' => $expenses,
             'month' => $month,
-            'monthTotal' => (float) Expense::where('status', 'approved')->whereBetween('expense_date', $range)->sum('amount'),
-            'pendingCount' => Expense::where('status', 'pending')->count(),
-            'pendingAmount' => (float) Expense::where('status', 'pending')->sum('amount'),
+            'monthTotal' => (float) Expense::visibleTo($user)->where('status', 'approved')->whereBetween('expense_date', $range)->sum('amount'),
+            'pendingCount' => Expense::visibleTo($user)->where('status', 'pending')->count(),
+            'pendingAmount' => (float) Expense::visibleTo($user)->where('status', 'pending')->sum('amount'),
             'budgetTotal' => (float) \App\Models\ExpenseHead::where('is_active', true)->sum('monthly_budget'),
-            'projects' => Project::orderBy('name')->get(['id', 'name', 'code']),
-            'employees' => Employee::active()->orderBy('full_name')->get(['id', 'full_name', 'basic_salary']),
+            'seeAll' => $user->hasPermission('expenses.view_all'),
+            'projects' => Project::visibleTo($user)->orderBy('name')->get(['id', 'name', 'code']),
+            'employees' => Employee::active()->when(! $user->hasPermission('employees.view'), fn ($q) => $q->whereKey($user->employee_id))
+                ->orderBy('full_name')->get(['id', 'full_name', 'basic_salary']),
         ]);
     }
 
     public function store(Request $request)
     {
         $data = $this->validated($request);
+        $approver = $request->user()->hasPermission('expenses.approve');
         $expense = Expense::create([
             ...collect($data)->except('receipts')->all(),
-            'status' => $request->user()->hasRole('admin', 'accounts') ? 'approved' : 'pending',
-            'approved_by' => $request->user()->hasRole('admin', 'accounts') ? $request->user()->id : null,
-            'approved_at' => $request->user()->hasRole('admin', 'accounts') ? now() : null,
+            'status' => $approver ? 'approved' : 'pending',
+            'approved_by' => $approver ? $request->user()->id : null,
+            'approved_at' => $approver ? now() : null,
             'created_by' => $request->user()->id,
         ]);
         $expense->attachFiles($request->file('receipts') ?? [], 'receipt');
@@ -60,6 +64,7 @@ class ExpenseController extends Controller
 
     public function update(Request $request, Expense $expense)
     {
+        $this->ensureCanChange($request, $expense);
         $data = $this->validated($request);
         $expense->update(collect($data)->except('receipts')->all());
         $expense->attachFiles($request->file('receipts') ?? [], 'receipt');
@@ -82,15 +87,32 @@ class ExpenseController extends Controller
         return back()->with('success', 'Expense rejected.');
     }
 
-    public function destroy(Expense $expense)
+    public function destroy(Request $request, Expense $expense)
     {
+        $this->ensureCanChange($request, $expense);
         $expense->delete();
 
         return back()->with('success', 'Expense deleted.');
     }
 
+    /** Approvers can change any expense; others only their own while it is still pending. */
+    private function ensureCanChange(Request $request, Expense $expense): void
+    {
+        $user = $request->user();
+        abort_unless($user->hasPermission('expenses.approve') || ($user->ownsExpense($expense) && $expense->status === 'pending'), 403, 'You can only change your own pending expenses.');
+    }
+
     private function validated(Request $request): array
     {
+        $user = $request->user();
+        // Without the directory, people can only file expenses for themselves and for projects they can see.
+        if ($request->filled('employee_id') && ! $user->hasPermission('employees.view')) {
+            abort_unless((int) $request->employee_id === (int) $user->employee_id, 403);
+        }
+        if ($request->filled('project_id') && ($project = Project::find($request->project_id))) {
+            $this->ensureCanSeeProject($project);
+        }
+
         if (preg_match('/^\d{4}-\d{2}$/', (string) $request->payroll_month)) {
             $request->merge(['payroll_month' => $request->payroll_month.'-01']);
         }

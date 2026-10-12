@@ -117,6 +117,7 @@ Status legend: ✅ built in this first PR · 🔜 next phase
 | 10.4 | Expense heads & budgets | ✅ |
 | 10.5 | Numbering prefixes | ✅ |
 | 10.6 | Taxes & currency | ✅ |
+| 10.9 | Access rights per role (Settings › Access rights, admin only): 21 permissions across all modules; staff by default see only their own profile, team projects and their own expenses. Project team picker. Account menu: my profile, edit profile, change password, log out | ✅ |
 | 10.7 | Notifications: on/off and recipient roles per alert (overdue invoices, pending expenses, follow-ups, site returns, overdue from site, low stock daily/weekly) | ✅ |
 
 ## M11. Notifications

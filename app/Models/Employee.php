@@ -82,6 +82,11 @@ class Employee extends Model
             ->map(fn ($p) => mb_strtoupper(mb_substr($p, 0, 1)))->implode('');
     }
 
+    public function projects(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(Project::class, 'project_members')->withPivot('role')->withTimestamps();
+    }
+
     public function photoUrl(): ?string
     {
         // Served through the app so photos work without `php artisan storage:link`; ?v= busts the cache after a change.

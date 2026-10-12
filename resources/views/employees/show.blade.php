@@ -5,6 +5,7 @@
     @endphp
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div class="flex items-center gap-4">
+            @if (auth()->user()->hasPermission('employees.manage') || auth()->user()->employee_id === $employee->id)
             <form method="POST" action="{{ route('employees.photo.update', $employee) }}" enctype="multipart/form-data" class="relative group shrink-0">
                 @csrf
                 <label class="block cursor-pointer rounded-full" title="{{ $employee->photo_path ? 'Change photo' : 'Upload photo' }}">
@@ -14,6 +15,9 @@
                     <input type="file" name="photo" accept="image/jpeg,image/png,image/webp" class="sr-only" onchange="this.form.submit()">
                 </label>
             </form>
+            @else
+                <x-avatar :name="$employee->full_name" :src="$employee->photoUrl()" size="size-16 text-lg" />
+            @endif
             <div>
                 <div class="flex flex-wrap items-center gap-2">
                     <h1 class="text-[22px] font-semibold">{{ $employee->full_name }}</h1>
@@ -23,8 +27,12 @@
             </div>
         </div>
         <div class="flex gap-2">
-            <button class="btn btn-secondary" @click="$store.drawer.open('leave')"><x-icon name="calendar-days" /> Record leave</button>
-            <a href="{{ route('employees.edit', $employee) }}" class="btn btn-secondary"><x-icon name="pencil" /> Edit</a>
+            @can('employees.manage')
+                <button class="btn btn-secondary" @click="$store.drawer.open('leave')"><x-icon name="calendar-days" /> Record leave</button>
+                <a href="{{ route('employees.edit', $employee) }}" class="btn btn-secondary"><x-icon name="pencil" /> Edit</a>
+            @elseif (auth()->user()->employee_id === $employee->id)
+                <a href="{{ route('account.edit') }}" class="btn btn-secondary"><x-icon name="pencil" /> Edit profile</a>
+            @endcan
         </div>
     </div>
 
@@ -109,7 +117,7 @@
                     <thead><tr><th>Asset</th><th>Tag</th><th>Condition</th><th>Since</th></tr></thead>
                     <tbody>
                     @forelse ($employee->assets as $a)
-                        <tr class="cursor-pointer" onclick="location='{{ route('inventory.show', $a) }}'"><td class="font-medium">{{ $a->name }}</td><td>{{ $a->asset_tag ?? '—' }}</td><td><x-pill :status="$a->condition" /></td><td>{{ $a->updated_at->format('d M Y') }}</td></tr>
+                        <tr class="cursor-pointer" @can('inventory.view') onclick="location='{{ route('inventory.show', $a) }}'" @endcan><td class="font-medium">{{ $a->name }}</td><td>{{ $a->asset_tag ?? '—' }}</td><td><x-pill :status="$a->condition" /></td><td>{{ $a->updated_at->format('d M Y') }}</td></tr>
                     @empty
                         <tr><td colspan="4"><x-empty icon="laptop" title="No assets assigned" /></td></tr>
                     @endforelse
@@ -120,11 +128,13 @@
 
         @case('documents')
             <div class="card card-pad space-y-4">
-                <form method="POST" action="{{ route('employees.documents', $employee) }}" enctype="multipart/form-data" class="space-y-3">
-                    @csrf
-                    <x-dropzone label="Upload CNIC copy, CV, contract or certificates" />
-                    <div class="flex justify-end"><button class="btn btn-primary btn-sm"><x-icon name="upload" /> Upload</button></div>
-                </form>
+                @can('employees.manage')
+                    <form method="POST" action="{{ route('employees.documents', $employee) }}" enctype="multipart/form-data" class="space-y-3">
+                        @csrf
+                        <x-dropzone label="Upload CNIC copy, CV, contract or certificates" />
+                        <div class="flex justify-end"><button class="btn btn-primary btn-sm"><x-icon name="upload" /> Upload</button></div>
+                    </form>
+                @endcan
                 <x-attachment-list :attachments="$employee->attachments" />
             </div>
             @break
@@ -154,7 +164,7 @@
                                 <div class="font-medium">{{ \App\Models\EmployeeLeave::TYPES[$l->leave_type] ?? $l->leave_type }} · {{ $l->days() }} day(s)</div>
                                 <div class="text-xs text-muted">{{ $l->start_date->format('d M') }} – {{ $l->end_date->format('d M Y') }}{{ $l->reason ? ' · '.$l->reason : '' }}</div>
                             </div>
-                            <x-action :url="route('leaves.destroy', $l)" method="DELETE" confirm="Remove this leave?" class="btn btn-icon !size-7 hover:text-red-fg"><x-icon name="trash-2" /></x-action>
+                            @can('employees.manage')<x-action :url="route('leaves.destroy', $l)" method="DELETE" confirm="Remove this leave?" class="btn btn-icon !size-7 hover:text-red-fg"><x-icon name="trash-2" /></x-action>@endcan
                         </div>
                     @empty
                         <p class="px-5 pb-5 text-[13px] text-muted">No leaves recorded.</p>

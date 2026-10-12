@@ -11,6 +11,7 @@
         </div>
         <div class="flex flex-wrap gap-2">
             <a href="{{ route('quotations.print', $quotation) }}" target="_blank" class="btn btn-secondary"><x-icon name="printer" /> Print / PDF</a>
+            @can('quotations.manage')
             @if ($quotation->isEditable())
                 <a href="{{ route('quotations.edit', $quotation) }}" class="btn btn-secondary"><x-icon name="pencil" /> Edit</a>
             @endif
@@ -27,6 +28,7 @@
             @if ($quotation->status === 'accepted' && ! $quotation->invoice_id)
                 <x-action :url="route('quotations.convert', $quotation)" method="POST" class="btn btn-primary"><x-icon name="arrow-right-left" /> Convert to invoice</x-action>
             @endif
+            @endcan
             @if ($quotation->invoice)
                 <a href="{{ route('invoices.show', $quotation->invoice) }}" class="btn btn-primary"><x-icon name="receipt" /> {{ $quotation->invoice->invoice_number }}</a>
             @endif

@@ -18,16 +18,18 @@ class SearchController extends Controller
 
         if (mb_strlen($q) >= 2) {
             $like = '%'.$q.'%';
+            $user = $request->user();
+            $none = fn ($query, string $permission) => $query->when(! $user->hasPermission($permission), fn ($q) => $q->whereRaw('1 = 0'));
             $results = collect()
-                ->merge(Project::where('name', 'like', $like)->orWhere('code', 'like', $like)->limit(8)->get()
+                ->merge(Project::visibleTo($user)->where(fn ($w) => $w->where('name', 'like', $like)->orWhere('code', 'like', $like))->limit(8)->get()
                     ->map(fn ($p) => ['group' => 'Projects', 'title' => $p->name, 'meta' => $p->code, 'url' => route('projects.show', $p)]))
-                ->merge(Client::where('name', 'like', $like)->orWhere('company_name', 'like', $like)->limit(5)->get()
+                ->merge($none(Client::where(fn ($w) => $w->where('name', 'like', $like)->orWhere('company_name', 'like', $like)), 'projects.manage')->limit(5)->get()
                     ->map(fn ($c) => ['group' => 'Clients', 'title' => $c->displayName(), 'meta' => $c->phone, 'url' => route('clients.edit', $c)]))
-                ->merge(Employee::where('full_name', 'like', $like)->orWhere('cnic', 'like', $like)->orWhere('employee_code', 'like', $like)->limit(5)->get()
+                ->merge($none(Employee::where(fn ($w) => $w->where('full_name', 'like', $like)->orWhere('cnic', 'like', $like)->orWhere('employee_code', 'like', $like)), 'employees.view')->limit(5)->get()
                     ->map(fn ($e) => ['group' => 'Employees', 'title' => $e->full_name, 'meta' => $e->designation, 'url' => route('employees.show', $e)]))
-                ->merge(Quotation::where('quotation_number', 'like', $like)->orWhere('title', 'like', $like)->limit(5)->get()
+                ->merge($none(Quotation::where(fn ($w) => $w->where('quotation_number', 'like', $like)->orWhere('title', 'like', $like)), 'quotations.view')->limit(5)->get()
                     ->map(fn ($x) => ['group' => 'Quotations', 'title' => $x->label(), 'meta' => $x->title, 'url' => route('quotations.show', $x)]))
-                ->merge(Invoice::where('invoice_number', 'like', $like)->limit(5)->get()
+                ->merge($none(Invoice::where('invoice_number', 'like', $like), 'invoices.view')->limit(5)->get()
                     ->map(fn ($x) => ['group' => 'Invoices', 'title' => $x->invoice_number, 'meta' => money($x->total), 'url' => route('invoices.show', $x)]));
         }
 

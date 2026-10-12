@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Client;
+use App\Models\Employee;
 use App\Models\Project;
 use App\Models\User;
 use App\Support\Activity;
@@ -15,7 +16,8 @@ class ProjectController extends Controller
     public function index(Request $request)
     {
         $view = $request->query('view', 'table');
-        $query = Project::with(['client', 'nextFollowUp', 'manager'])
+        $user = $request->user();
+        $query = Project::visibleTo($user)->with(['client', 'nextFollowUp', 'manager'])
             ->withSum(['invoices as outstanding' => fn ($q) => $q->whereNotIn('status', ['draft', 'cancelled'])], 'balance_due')
             ->when($request->q, fn ($q, $s) => $q->where(fn ($w) => $w->where('name', 'like', "%$s%")->orWhere('code', 'like', "%$s%")
                 ->orWhereHas('client', fn ($c) => $c->where('name', 'like', "%$s%")->orWhere('company_name', 'like', "%$s%"))))
@@ -23,8 +25,8 @@ class ProjectController extends Controller
             ->latest();
 
         $projects = $view === 'board' ? $query->get() : $query->paginate(20)->withQueryString();
-        $counts = Project::selectRaw('status, count(*) as total')->groupBy('status')->pluck('total', 'status');
-        $totalValue = (float) Project::whereNot('status', 'cancelled')->sum('project_value');
+        $counts = Project::visibleTo($user)->selectRaw('status, count(*) as total')->groupBy('status')->pluck('total', 'status');
+        $totalValue = (float) Project::visibleTo($user)->whereNot('status', 'cancelled')->sum('project_value');
 
         return view('projects.index', compact('projects', 'view', 'counts', 'totalValue'));
     }
@@ -41,10 +43,11 @@ class ProjectController extends Controller
     {
         $data = $this->validated($request);
         $data['client_id'] = $this->resolveClient($request, $data['client_id'] ?? null);
-        unset($data['new_client_name'], $data['new_client_phone']);
+        unset($data['new_client_name'], $data['new_client_phone'], $data['team']);
         $data['project_value'] ??= 0;
         $data['code'] = Numbering::project();
         $project = Project::create($data);
+        $this->syncTeam($request, $project);
         Activity::log('created', "Project {$project->name} created", $project, $project->id);
 
         return redirect()->route('projects.show', $project)->with('success', 'Project created.');
@@ -52,8 +55,9 @@ class ProjectController extends Controller
 
     public function show(Request $request, Project $project)
     {
+        abort_unless($request->user()->canSeeProject($project), 403, 'You are not on this project\'s team.');
         $project->load([
-            'client', 'manager',
+            'client', 'manager', 'members',
             'followUps' => fn ($q) => $q->with('assignee')->orderByRaw("status = 'done'")->orderBy('due_date'),
             'quotations' => fn ($q) => $q->latest('issue_date')->latest('revision'),
             'invoices' => fn ($q) => $q->latest('issue_date'),
@@ -66,7 +70,7 @@ class ProjectController extends Controller
         // Timeline merges activity log entries with "Logged" document cards.
         $timeline = $project->activities()->with('user')->where('action', '!=', 'logged')->limit(40)->get()->toBase()
             ->map(fn ($a) => ['kind' => 'activity', 'at' => $a->created_at, 'item' => $a])
-            ->merge($project->documentLogs->map(fn ($d) => ['kind' => 'log', 'at' => $d->sent_date->copy()->setTimeFrom($d->created_at), 'item' => $d]))
+            ->merge($project->documentLogs->filter(fn () => $request->user()->hasPermission('quotations.view'))->map(fn ($d) => ['kind' => 'log', 'at' => $d->sent_date->copy()->setTimeFrom($d->created_at), 'item' => $d]))
             ->sortByDesc('at')->values();
 
         return view('projects.show', [
@@ -87,10 +91,11 @@ class ProjectController extends Controller
     {
         $data = $this->validated($request, $project);
         $data['client_id'] = $this->resolveClient($request, $data['client_id'] ?? null);
-        unset($data['new_client_name'], $data['new_client_phone']);
+        unset($data['new_client_name'], $data['new_client_phone'], $data['team']);
         $data['project_value'] ??= 0;
         $oldStatus = $project->status;
         $project->update($data);
+        $this->syncTeam($request, $project);
         if ($oldStatus !== $project->status) {
             Activity::log('status_changed', 'Status changed to '.Project::STATUSES[$project->status], $project, $project->id);
         }
@@ -109,6 +114,7 @@ class ProjectController extends Controller
 
     public function uploadFiles(Request $request, Project $project)
     {
+        abort_unless($request->user()->canSeeProject($project), 403);
         $request->validate(['files' => ['required', 'array'], 'files.*' => ['file', 'max:20480']]);
         $project->attachFiles($request->file('files'));
         Activity::log('files_uploaded', count($request->file('files')).' file(s) uploaded', $project, $project->id);
@@ -128,7 +134,13 @@ class ProjectController extends Controller
         return [
             'clients' => Client::orderBy('name')->get(),
             'managers' => User::whereIn('role', ['admin', 'manager'])->orderBy('name')->get(),
+            'employees' => Employee::active()->orderBy('full_name')->get(['id', 'full_name', 'designation', 'photo_path', 'updated_at']),
         ];
+    }
+
+    private function syncTeam(Request $request, Project $project): void
+    {
+        $project->members()->sync($request->input('team', []));
     }
 
     private function validated(Request $request, ?Project $project = null): array
@@ -146,6 +158,8 @@ class ProjectController extends Controller
             'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
             'manager_id' => ['nullable', 'exists:users,id'],
             'description' => ['nullable', 'string', 'max:5000'],
+            'team' => ['nullable', 'array'],
+            'team.*' => ['integer', 'exists:employees,id'],
         ]);
     }
 

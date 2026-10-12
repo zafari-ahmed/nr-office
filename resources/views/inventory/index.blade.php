@@ -1,7 +1,7 @@
 <x-layouts.app title="Inventory">
     <x-page-header title="Inventory" subtitle="Equipment, IT and office stock · click any item for its history">
         <x-slot:actions>
-            <button class="btn btn-primary" @click="$store.drawer.open('item')"><x-icon name="plus" /> Add item</button>
+            @can('inventory.manage')<button class="btn btn-primary" @click="$store.drawer.open('item')"><x-icon name="plus" /> Add item</button>@endcan
         </x-slot:actions>
     </x-page-header>
 

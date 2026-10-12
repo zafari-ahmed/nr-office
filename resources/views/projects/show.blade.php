@@ -1,15 +1,19 @@
 <x-layouts.app :title="$project->name">
     @php
-        $tabs = [
+        $me = auth()->user();
+        $canMoney = $me->hasPermission('invoices.view');
+        $tabs = array_filter([
             'overview' => ['Overview', null],
             'follow-ups' => ['Follow-ups', $project->followUps->where('status', 'pending')->count()],
-            'quotations' => ['Quotations', $project->quotations->count()],
-            'invoices' => ['Invoices', $project->invoices->count()],
+            'quotations' => $me->hasPermission('quotations.view') ? ['Quotations', $project->quotations->count()] : null,
+            'invoices' => $canMoney ? ['Invoices', $project->invoices->count()] : null,
             'expenses' => ['Expenses', null],
-            'site-visits' => ['Site visits', null],
+            'site-visits' => $me->hasPermission('rotation.view') ? ['Site visits', null] : null,
             'files' => ['Files', null],
             'notes' => ['Notes', null],
-        ];
+        ]);
+        $tab = array_key_exists($tab, $tabs) ? $tab : 'overview';
+        $projectExpenses = $me->hasPermission('expenses.view_all') ? $project->expenses : $project->expenses->filter(fn ($e) => $me->ownsExpense($e));
         $pct = fn ($a, $b) => $b > 0 ? round($a / $b * 100).'%' : '0%';
         $latestQuote = $project->quotations->whereNotIn('status', ['revised', 'rejected'])->sortByDesc('id')->first();
         $openInvoices = $project->invoices->whereNotIn('status', ['paid', 'cancelled', 'draft'])->count();
@@ -20,9 +24,9 @@
             ['Outstanding', $kpis['outstanding'], $openInvoices.' open '.str('invoice')->plural($openInvoices), $kpis['outstanding'] > 0 ? 'text-amber-fg' : ''],
             ['Expenses', $kpis['expenses'], $pct($kpis['expenses'], $kpis['quoted']).' of quoted', ''],
         ];
-        $team = collect([$project->manager ? ['name' => $project->manager->name, 'role' => 'Project Manager'] : null])
-            ->merge($project->siteVisits->toBase()->pluck('employee')->filter()->unique(fn ($e) => $e->id)->map(fn ($e) => ['name' => $e->full_name, 'role' => $e->designation]))
-            ->filter()->take(6);
+        $team = collect([$project->manager ? ['name' => $project->manager->name, 'role' => 'Project Manager', 'photo' => $project->manager->employee?->photoUrl()] : null])
+            ->merge($project->members->toBase()->map(fn ($e) => ['name' => $e->full_name, 'role' => $e->pivot->role ?: $e->designation, 'photo' => $e->photoUrl()]))
+            ->filter();
         $next = $project->followUps->where('status', 'pending')->sortBy('due_date')->first();
     @endphp
 
@@ -43,6 +47,7 @@
             @if ($project->manager)<span class="inline-flex items-center gap-1.5"><x-icon name="user" class="size-3.5" />{{ $project->manager->name }}</span>@endif
         </x-slot:meta>
         <x-slot:actions>
+            @can('projects.manage')
             <form method="POST" action="{{ route('projects.status', $project) }}" x-data>
                 @csrf @method('PATCH')
                 <select name="status" class="input !h-[34px] !w-32" @change="$el.form.submit()" title="Change status">
@@ -50,12 +55,16 @@
                 </select>
             </form>
             <a href="{{ route('projects.edit', $project) }}" class="btn btn-icon btn-secondary" title="Edit project"><x-icon name="pencil" /></a>
+            @endcan
+            @can('quotations.manage')
             <button class="btn btn-secondary" @click="$store.drawer.open('log-document-{{ $project->id }}')"><x-icon name="paperclip" /> Log sent document</button>
             <a href="{{ route('quotations.create', ['project' => $project->id]) }}" class="btn btn-primary"><x-icon name="file-plus" /> New quotation</a>
+            @endcan
         </x-slot:actions>
     </x-page-header>
 
     {{-- KPI strip --}}
+    @if ($canMoney)
     <div class="card grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 mb-5 overflow-hidden">
         @foreach ($kpiCells as [$label, $amount, $sub, $tone])
             <div class="px-[18px] py-4 border-line border-b lg:border-b-0 [&:not(:last-child)]:border-r">
@@ -65,6 +74,7 @@
             </div>
         @endforeach
     </div>
+    @endif
 
     <div class="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-5">
         <div class="min-w-0">
@@ -98,7 +108,7 @@
                     @break
 
                 @case('quotations')
-                    <div class="flex justify-end mb-3"><a href="{{ route('quotations.create', ['project' => $project->id]) }}" class="btn btn-primary btn-sm"><x-icon name="plus" /> New quotation</a></div>
+                    <div @class(['flex justify-end mb-3', 'hidden' => ! $me->hasPermission('quotations.manage')])><a href="{{ route('quotations.create', ['project' => $project->id]) }}" class="btn btn-primary btn-sm"><x-icon name="plus" /> New quotation</a></div>
                     <div class="card overflow-x-auto">
                         <table class="table">
                             <thead><tr><th>Number</th><th>Title</th><th>Date</th><th>Status</th><th class="text-right">Total</th></tr></thead>
@@ -118,7 +128,7 @@
                     @break
 
                 @case('invoices')
-                    <div class="flex justify-end mb-3"><a href="{{ route('invoices.create', ['project' => $project->id]) }}" class="btn btn-primary btn-sm"><x-icon name="plus" /> New invoice</a></div>
+                    <div @class(['flex justify-end mb-3', 'hidden' => ! $me->hasPermission('invoices.manage')])><a href="{{ route('invoices.create', ['project' => $project->id]) }}" class="btn btn-primary btn-sm"><x-icon name="plus" /> New invoice</a></div>
                     <div class="card overflow-x-auto">
                         <table class="table">
                             <thead><tr><th>Number</th><th>Issued</th><th>Due</th><th>Status</th><th class="text-right">Total</th><th class="text-right">Balance</th></tr></thead>
@@ -142,7 +152,7 @@
                         <table class="table">
                             <thead><tr><th>Date</th><th>Head</th><th>Description</th><th>Status</th><th class="text-right">Amount</th></tr></thead>
                             <tbody>
-                            @forelse ($project->expenses as $e)
+                            @forelse ($projectExpenses as $e)
                                 <tr><td>{{ $e->expense_date->format('d M Y') }}</td><td>{{ $e->head->name }}</td><td>{{ $e->description }}</td><td><x-pill :status="$e->status" /></td><td class="text-right tabular-nums">{{ money($e->amount) }}</td></tr>
                             @empty
                                 <tr><td colspan="5"><x-empty icon="wallet" title="No expenses linked to this project" /></td></tr>
@@ -324,7 +334,7 @@
                     <div class="space-y-2.5">
                         @foreach ($team as $m)
                             <div class="flex items-center gap-2.5">
-                                <x-avatar :name="$m['name']" size="size-[30px] text-[11px]" />
+                                <x-avatar :name="$m['name']" :src="$m['photo']" size="size-[30px] text-[11px]" />
                                 <div class="leading-tight"><div class="text-[13.5px] font-medium">{{ $m['name'] }}</div><div class="text-[12px] text-muted">{{ $m['role'] }}</div></div>
                             </div>
                         @endforeach
@@ -333,7 +343,7 @@
             @endif
             <div class="card p-4 text-[13px] space-y-1.5">
                 <div class="section-title mb-2">Details</div>
-                <div class="flex justify-between"><span class="text-muted">Project value</span><span class="font-medium tabular-nums">{{ money($project->project_value) }}</span></div>
+                @if ($canMoney)<div class="flex justify-between"><span class="text-muted">Project value</span><span class="font-medium tabular-nums">{{ money($project->project_value) }}</span></div>@endif
                 <div class="flex justify-between"><span class="text-muted">Start</span><span>{{ $project->start_date?->format('j M Y') ?? '—' }}</span></div>
                 <div class="flex justify-between"><span class="text-muted">End</span><span>{{ $project->end_date?->format('j M Y') ?? '—' }}</span></div>
             </div>
@@ -342,6 +352,8 @@
 
     <x-slot:drawers>
         @include('partials.drawers.follow-up', ['project' => $project, 'users' => $users, 'projects' => collect()])
-        @include('partials.drawers.log-document', ['project' => $project, 'projects' => collect([$project])])
+        @can('quotations.manage')
+            @include('partials.drawers.log-document', ['project' => $project, 'projects' => collect([$project])])
+        @endcan
     </x-slot:drawers>
 </x-layouts.app>

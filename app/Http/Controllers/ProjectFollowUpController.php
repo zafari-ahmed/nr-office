@@ -11,6 +11,7 @@ class ProjectFollowUpController extends Controller
 {
     public function store(Request $request, Project $project)
     {
+        $this->ensureCanSeeProject($project);
         $data = $this->validated($request);
         $followUp = $project->followUps()->create([...$data, 'created_by' => $request->user()->id]);
         Activity::log('follow_up_added', "Follow-up added: {$followUp->title}", $followUp, $project->id);
@@ -28,6 +29,7 @@ class ProjectFollowUpController extends Controller
 
     public function done(ProjectFollowUp $followUp)
     {
+        $this->ensureCanSeeProject($followUp->project);
         $followUp->update(['status' => 'done', 'completed_at' => now()]);
         Activity::log('follow_up_done', "Follow-up done: {$followUp->title}", $followUp, $followUp->project_id);
 
@@ -36,6 +38,7 @@ class ProjectFollowUpController extends Controller
 
     public function snooze(Request $request, ProjectFollowUp $followUp)
     {
+        $this->ensureCanSeeProject($followUp->project);
         $days = (int) $request->input('days', 2);
         $newDate = $followUp->due_date->isPast() ? today()->addDays($days) : $followUp->due_date->copy()->addDays($days);
         $followUp->update(['due_date' => $newDate, 'snoozed_until' => $newDate]);
@@ -45,6 +48,7 @@ class ProjectFollowUpController extends Controller
 
     public function destroy(ProjectFollowUp $followUp)
     {
+        $this->ensureCanSeeProject($followUp->project);
         $followUp->delete();
 
         return back()->with('success', 'Follow-up removed.');

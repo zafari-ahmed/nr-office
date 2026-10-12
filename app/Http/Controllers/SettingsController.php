@@ -11,7 +11,8 @@ class SettingsController extends Controller
 {
     public const SECTIONS = [
         'company' => ['Company profile', 'building-2'],
-        'users' => ['Users & roles', 'shield-check'],
+        'users' => ['Users & roles', 'users'],
+        'access' => ['Access rights', 'shield-check'],
         'rotation' => ['Rotation rules', 'refresh-cw'],
         'notifications' => ['Notifications', 'bell'],
         'expense-heads' => ['Expense heads & budgets', 'wallet'],
@@ -68,10 +69,30 @@ class SettingsController extends Controller
         ],
     ];
 
+    /** The permission each section needs; everything else needs settings.manage. */
+    public static function allowed(\App\Models\User $user, string $section): bool
+    {
+        return $user->hasPermission(match ($section) { 'users' => 'users.manage', 'access' => 'access.manage', default => 'settings.manage' })
+            || ($section === 'access' && $user->isAdmin());
+    }
+
+    public static function url(string $section): string
+    {
+        return match ($section) { 'users' => route('settings.users.index'), 'access' => route('settings.access.edit'), default => route('settings.show', $section) };
+    }
+
+    public function home(Request $request)
+    {
+        $first = collect(array_keys(self::SECTIONS))->first(fn ($s) => self::allowed($request->user(), $s));
+        abort_unless($first, 403, 'You do not have access to settings.');
+
+        return redirect(self::url($first));
+    }
+
     public function show(string $section)
     {
-        if ($section === 'users') {
-            return redirect()->route('settings.users.index');
+        if (in_array($section, ['users', 'access'], true)) {
+            return redirect(self::url($section));
         }
         abort_unless(array_key_exists($section, self::SECTIONS), 404);
 

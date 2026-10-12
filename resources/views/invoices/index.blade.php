@@ -9,8 +9,8 @@
     <x-page-header title="Invoices" :subtitle="$all->sum('total').' invoices · '.$cur.' '.money_short($unpaid).' unpaid'">
         <x-slot:actions>
             <a href="{{ route('document-logs.index') }}" class="btn btn-ghost"><x-icon name="list" /> Sent log</a>
-            <button class="btn btn-secondary" @click="$store.drawer.open('log-document')"><x-icon name="paperclip" /> Log sent document</button>
-            <a href="{{ route('invoices.create') }}" class="btn btn-primary"><x-icon name="plus" /> New invoice</a>
+            @can('quotations.manage')<button class="btn btn-secondary" @click="$store.drawer.open('log-document')"><x-icon name="paperclip" /> Log sent document</button>@endcan
+            @can('invoices.manage')<a href="{{ route('invoices.create') }}" class="btn btn-primary"><x-icon name="plus" /> New invoice</a>@endcan
         </x-slot:actions>
     </x-page-header>
 
@@ -43,7 +43,7 @@
                         <td class="text-right tabular-nums font-semibold">{{ $i->status === 'draft' || $i->status === 'cancelled' ? '—' : money($i->balance_due) }}</td>
                         <td><x-pill :status="$i->status" /></td>
                         <td class="text-right" onclick="event.stopPropagation()">
-                            @if (in_array($i->status, ['sent', 'partially_paid', 'overdue']))
+                            @if (in_array($i->status, ['sent', 'partially_paid', 'overdue']) && auth()->user()->hasPermission('invoices.manage'))
                                 <a href="{{ route('invoices.show', [$i, 'pay' => 1]) }}" class="btn btn-secondary btn-sm"><x-icon name="credit-card" /> Record payment</a>
                             @endif
                         </td>

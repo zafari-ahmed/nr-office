@@ -1,6 +1,6 @@
 <x-layouts.app title="Expenses">
     @php $cur = \App\Models\Setting::get('finance.currency'); @endphp
-    <x-page-header title="Expenses" :subtitle="$month->format('F Y').' · '.money($monthTotal).($budgetTotal > 0 ? ' of '.money($budgetTotal).' budget' : ' approved')">
+    <x-page-header :title="$seeAll ? 'Expenses' : 'My expenses'" :subtitle="$month->format('F Y').' · '.money($monthTotal).($seeAll && $budgetTotal > 0 ? ' of '.money($budgetTotal).' budget' : ' approved')">
         <x-slot:actions>
             <form class="flex items-center">
                 <a href="{{ route('expenses.index', ['month' => $month->copy()->subMonthNoOverflow()->format('Y-m')]) }}" class="btn btn-icon" title="Previous month"><x-icon name="chevron-left" /></a>
@@ -21,7 +21,7 @@
         @foreach ($heads as $head)
             @php
                 $spent = (float) $head->spent;
-                $budget = (float) $head->monthly_budget;
+                $budget = $seeAll ? (float) $head->monthly_budget : 0;
                 $pct = $budget > 0 ? round($spent / $budget * 100) : null;
                 $barColor = $pct === null ? 'bg-accent' : ($pct > 100 ? 'bg-red-fg' : ($pct >= 90 ? 'bg-amber-fg' : 'bg-accent'));
                 $pctColor = $pct === null ? 'text-muted' : ($pct > 100 ? 'text-red-fg' : ($pct >= 90 ? 'text-amber-fg' : 'text-muted'));
@@ -30,7 +30,7 @@
                 <div class="flex items-center gap-2.5">
                     <span class="grid place-items-center size-[30px] rounded-lg bg-surface-2 text-ink-2"><x-icon :name="$head->icon ?: 'wallet'" class="size-4" /></span>
                     <span class="text-[14px] font-medium truncate">{{ $head->name }}</span>
-                    <span class="ml-auto text-[12px] font-semibold {{ $pctColor }}">{{ $pct !== null ? $pct.'% used' : 'No budget' }}</span>
+                    @if ($seeAll)<span class="ml-auto text-[12px] font-semibold {{ $pctColor }}">{{ $pct !== null ? $pct.'% used' : 'No budget' }}</span>@endif
                 </div>
                 <div class="text-[22px] font-semibold tracking-[-.01em] mt-3 tabular-nums">{{ money($spent) }}</div>
                 @if ($pct !== null)
@@ -39,11 +39,11 @@
                 @endif
             </a>
         @endforeach
-        @if (auth()->user()->hasRole('admin', 'manager'))
+        @can('settings.manage')
             <a href="{{ route('settings.show', 'expense-heads') }}" class="rounded-card border border-dashed border-line grid place-items-center min-h-[140px] text-[13.5px] font-medium text-ink-2 no-underline hover:text-ink hover:border-accent/40 hover:no-underline">
                 <span class="inline-flex items-center gap-1.5"><x-icon name="plus" class="size-4" /> Add expense head</span>
             </a>
-        @endif
+        @endcan
     </div>
 
     <div class="flex flex-wrap items-center gap-2 mb-3.5">
@@ -86,16 +86,16 @@
                         <td class="text-right tabular-nums font-semibold whitespace-nowrap">{{ money($e->amount) }}</td>
                         <td><x-pill :status="$e->status" /></td>
                         <td class="text-right whitespace-nowrap">
-                            @if ($e->status === 'pending' && auth()->user()->hasRole('admin', 'manager', 'accounts'))
+                            @if ($e->status === 'pending' && auth()->user()->hasPermission('expenses.approve'))
                                 <x-action :url="route('expenses.approve', $e)" class="btn btn-secondary btn-sm text-green-fg"><x-icon name="check" /> Approve</x-action>
                                 <x-action :url="route('expenses.reject', $e)" class="btn btn-secondary btn-sm !w-[30px] !px-0 text-red-fg" title="Reject"><x-icon name="x" /></x-action>
-                            @else
+                            @elseif (auth()->user()->hasPermission('expenses.approve') || (auth()->user()->ownsExpense($e) && $e->status === 'pending'))
                                 <x-action :url="route('expenses.destroy', $e)" method="DELETE" confirm="Delete this expense?" class="btn btn-icon !size-7 !w-7 hover:text-red-fg" title="Delete"><x-icon name="trash-2" class="!size-3.5" /></x-action>
                             @endif
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="8"><x-empty icon="wallet" title="No expenses for this filter" text="Add salaries, daily office items or renovation costs with a receipt photo."><button class="btn btn-primary" @click="$store.drawer.open('expense')">Add expense</button></x-empty></td></tr>
+                    <tr><td colspan="8"><x-empty icon="wallet" title="No expenses for this filter" :text="$seeAll ? 'Add salaries, daily office items or renovation costs with a receipt photo.' : 'Add what you spent for the office or a site, with a receipt photo. It goes for approval.'"><button class="btn btn-primary" @click="$store.drawer.open('expense')">Add expense</button></x-empty></td></tr>
                 @endforelse
                 </tbody>
             </table>

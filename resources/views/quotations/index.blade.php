@@ -1,8 +1,10 @@
 <x-layouts.app title="Quotations">
     <x-page-header title="Quotations" subtitle="Build, send and track quotes. Accepted quotes convert to invoices.">
         <x-slot:actions>
+            @can('quotations.manage')
             <button class="btn btn-secondary" @click="$store.drawer.open('log-document')"><x-icon name="mail" /> Log outside quote</button>
             <a href="{{ route('quotations.create') }}" class="btn btn-primary"><x-icon name="plus" /> New quotation</a>
+            @endcan
         </x-slot:actions>
     </x-page-header>
 

@@ -44,6 +44,24 @@ class User extends Authenticatable
         return in_array($this->role, $roles, true);
     }
 
+    public function hasPermission(string $permission): bool
+    {
+        return $this->isAdmin() || in_array($permission, \App\Support\Access::forRole($this->role), true);
+    }
+
+    public function canSeeProject(Project $project): bool
+    {
+        return $this->hasPermission('projects.view_all')
+            || $project->manager_id === $this->id
+            || ($this->employee_id && $project->members()->whereKey($this->employee_id)->exists());
+    }
+
+    /** Expenses this person added, or that are for them (e.g. their salary). */
+    public function ownsExpense(Expense $expense): bool
+    {
+        return $expense->created_by === $this->id || ($this->employee_id && $expense->employee_id === $this->employee_id);
+    }
+
     public function isAdmin(): bool
     {
         return $this->role === 'admin';

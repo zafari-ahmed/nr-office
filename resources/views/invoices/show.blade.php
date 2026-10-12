@@ -10,12 +10,14 @@
         </div>
         <div class="flex flex-wrap gap-2">
             <a href="{{ route('invoices.print', $invoice) }}" target="_blank" class="btn btn-secondary"><x-icon name="printer" /> Print / PDF</a>
+            @can('invoices.manage')
             @if ($invoice->isEditable())<a href="{{ route('invoices.edit', $invoice) }}" class="btn btn-secondary"><x-icon name="pencil" /> Edit</a>@endif
             @if ($invoice->status === 'draft')
                 <x-action :url="route('invoices.status', $invoice)" data-status="sent" class="btn btn-primary"><x-icon name="send" /> Mark sent</x-action>
             @elseif (in_array($invoice->status, ['sent', 'partially_paid', 'overdue']))
                 <button class="btn btn-primary" @click="$store.drawer.open('payment')"><x-icon name="banknote" /> Record payment</button>
             @endif
+            @endcan
         </div>
     </div>
 
@@ -36,13 +38,13 @@
                             <div class="font-medium tabular-nums">{{ money($p->amount) }}</div>
                             <div class="text-xs text-muted">{{ $p->payment_date->format('d M Y') }} · {{ $methods[$p->method] ?? $p->method }}@if ($p->reference_no) · {{ $p->reference_no }}@endif</div>
                         </div>
-                        <x-action :url="route('payments.destroy', $p)" method="DELETE" confirm="Remove this payment?" class="btn btn-icon hover:text-red-fg"><x-icon name="trash-2" /></x-action>
+                        @can('invoices.manage')<x-action :url="route('payments.destroy', $p)" method="DELETE" confirm="Remove this payment?" class="btn btn-icon hover:text-red-fg"><x-icon name="trash-2" /></x-action>@endcan
                     </div>
                 @empty
                     <p class="px-5 pb-5 text-[13px] text-muted">No payments yet.</p>
                 @endforelse
             </div>
-            @if (! in_array($invoice->status, ['paid', 'cancelled']))
+            @if (! in_array($invoice->status, ['paid', 'cancelled']) && auth()->user()->hasPermission('invoices.manage'))
                 <x-action :url="route('invoices.status', $invoice)" data-status="cancelled" confirm="Cancel this invoice?" class="btn btn-ghost btn-sm w-full">Cancel invoice</x-action>
             @endif
         </aside>

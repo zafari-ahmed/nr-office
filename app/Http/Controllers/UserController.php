@@ -31,13 +31,15 @@ class UserController extends Controller
         return redirect()->route('settings.users.index')->with('success', 'User created.');
     }
 
-    public function edit(User $user)
+    public function edit(Request $request, User $user)
     {
+        $this->ensureCanTouch($request, $user);
         return view('settings.user-form', ['user' => $user, ...$this->formData()]);
     }
 
     public function update(Request $request, User $user)
     {
+        $this->ensureCanTouch($request, $user);
         $data = $this->validated($request, $user);
         if (blank($data['password'] ?? null)) {
             unset($data['password']);
@@ -51,15 +53,22 @@ class UserController extends Controller
     public function destroy(Request $request, User $user)
     {
         abort_if($user->is($request->user()), 422, 'You cannot delete yourself.');
+        $this->ensureCanTouch($request, $user);
         $user->update(['is_active' => false]);
 
         return back()->with('success', 'User deactivated.');
     }
 
+    /** Only an Admin can change Admin accounts. */
+    private function ensureCanTouch(Request $request, User $user): void
+    {
+        abort_if($user->isAdmin() && ! $request->user()->isAdmin(), 403, 'Only an Admin can change Admin accounts.');
+    }
+
     private function formData(): array
     {
         return [
-            'roles' => User::ROLES,
+            'roles' => auth()->user()->isAdmin() ? User::ROLES : array_diff_key(User::ROLES, ['admin' => 1]),
             'employees' => Employee::active()->orderBy('full_name')->get(['id', 'full_name']),
             'sections' => SettingsController::SECTIONS,
             'section' => 'users',
@@ -72,7 +81,8 @@ class UserController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', Rule::unique('users')->ignore($user)],
             'phone' => ['nullable', 'string', 'max:30'],
-            'role' => ['required', Rule::in(array_keys(User::ROLES))],
+            // Only an Admin can make someone an Admin.
+            'role' => ['required', Rule::in(array_keys($request->user()->isAdmin() ? User::ROLES : array_diff_key(User::ROLES, ['admin' => 1])))],
             'employee_id' => ['nullable', 'exists:employees,id'],
             'password' => [$user ? 'nullable' : 'required', Password::min(8)],
         ]);

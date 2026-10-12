@@ -6,6 +6,7 @@ use App\Models\Concerns\HasAttachments;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -39,6 +40,23 @@ class Project extends Model
     public function manager(): BelongsTo
     {
         return $this->belongsTo(User::class, 'manager_id');
+    }
+
+    /** The project team (employees). */
+    public function members(): BelongsToMany
+    {
+        return $this->belongsToMany(Employee::class, 'project_members')->withPivot('role')->withTimestamps();
+    }
+
+    /** Projects this user may open: all of them, or the ones they manage or are on the team of. */
+    public function scopeVisibleTo($query, User $user)
+    {
+        if ($user->hasPermission('projects.view_all')) {
+            return $query;
+        }
+
+        return $query->where(fn ($q) => $q->where('manager_id', $user->id)
+            ->when($user->employee_id, fn ($q) => $q->orWhereHas('members', fn ($m) => $m->whereKey($user->employee_id))));
     }
 
     public function followUps(): HasMany

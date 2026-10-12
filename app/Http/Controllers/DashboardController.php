@@ -16,20 +16,23 @@ use Illuminate\Support\Carbon;
 
 class DashboardController extends Controller
 {
-    public function __invoke()
+    public function __invoke(\Illuminate\Http\Request $request)
     {
+        $user = $request->user();
+        $can = fn (string $permission) => $user->hasPermission($permission);
+        $visible = Project::visibleTo($user)->pluck('id');
         $today = today();
         $remindDays = Setting::int('rotation.remind_days_before');
 
-        $thisMonth = (float) Expense::where('status', 'approved')
+        $thisMonth = (float) Expense::visibleTo($user)->where('status', 'approved')
             ->whereBetween('expense_date', [$today->copy()->startOfMonth(), $today->copy()->endOfMonth()])->sum('amount');
-        $lastMonth = (float) Expense::where('status', 'approved')
+        $lastMonth = (float) Expense::visibleTo($user)->where('status', 'approved')
             ->whereBetween('expense_date', [$today->copy()->subMonthNoOverflow()->startOfMonth(), $today->copy()->subMonthNoOverflow()->endOfMonth()])->sum('amount');
 
-        $onSite = SiteVisit::onSite()->with('employee', 'project')->orderBy('expected_return_date')->get();
+        $onSite = ! $can('rotation.view') ? collect() : SiteVisit::onSite()->with('employee', 'project')->orderBy('expected_return_date')->get();
 
         $stats = [
-            'active_projects' => Project::where('status', 'active')->count(),
+            'active_projects' => Project::visibleTo($user)->where('status', 'active')->count(),
             'quotes_pending' => Quotation::where('status', 'sent')->count(),
             'unpaid_amount' => (float) Invoice::unpaid()->sum('balance_due'),
             'unpaid_count' => Invoice::unpaid()->count(),
@@ -37,7 +40,7 @@ class DashboardController extends Controller
             'expenses_last_month' => $lastMonth,
             'expenses_change' => $lastMonth > 0 ? round(($thisMonth - $lastMonth) / $lastMonth * 100) : null,
             'on_site' => $onSite->count(),
-            'leads' => Project::where('status', 'lead')->count(),
+            'leads' => Project::visibleTo($user)->where('status', 'lead')->count(),
             'quotes_pending_value' => (float) Quotation::where('status', 'sent')->sum('total'),
             'overdue_invoices' => Invoice::where('status', 'overdue')->count(),
             'field_staff' => \App\Models\Employee::active()->count(),
@@ -48,25 +51,25 @@ class DashboardController extends Controller
         // Needs attention: one list, each row with a one-click action.
         $attention = collect();
         $late = fn ($d) => ($n = (int) $d->diffInDays($today, true)).' '.str('day')->plural($n).' overdue';
-        ProjectFollowUp::pending()->with('project')->whereDate('due_date', '<', $today)->orderBy('due_date')->limit(6)->get()
+        ProjectFollowUp::pending()->with('project')->whereIn('project_id', $visible)->whereDate('due_date', '<', $today)->orderBy('due_date')->limit(6)->get()
             ->each(fn ($f) => $attention->push([
                 'type' => 'follow_up', 'tone' => 'red', 'icon' => 'phone',
                 'title' => $f->title, 'meta' => $f->project->name, 'date' => $f->due_date, 'label' => 'Follow-up', 'due' => $late($f->due_date),
                 'action' => ['label' => 'Mark done', 'method' => 'PATCH', 'url' => route('follow-ups.done', $f)],
             ]));
-        Invoice::where('status', 'overdue')->with('project', 'client')->orderBy('due_date')->limit(5)->get()
+        Invoice::where('status', 'overdue')->when(! $can('invoices.view'), fn ($q) => $q->whereRaw('1 = 0'))->with('project', 'client')->orderBy('due_date')->limit(5)->get()
             ->each(fn ($i) => $attention->push([
                 'type' => 'invoice', 'tone' => 'red', 'icon' => 'receipt',
                 'title' => $i->invoice_number.' · '.money($i->balance_due), 'meta' => $i->project->name, 'date' => $i->due_date, 'label' => $i->client?->name ?? 'Invoice', 'due' => $late($i->due_date),
                 'action' => ['label' => 'Send reminder', 'url' => route('invoices.show', $i)],
             ]));
-        Quotation::where('status', 'sent')->with('project')->where('sent_at', '<', now()->subDays(5))->limit(5)->get()
+        Quotation::where('status', 'sent')->when(! $can('quotations.view'), fn ($q) => $q->whereRaw('1 = 0'))->with('project')->where('sent_at', '<', now()->subDays(5))->limit(5)->get()
             ->each(fn ($q) => $attention->push([
                 'type' => 'quotation', 'tone' => 'amber', 'icon' => 'file-text',
                 'title' => $q->label().' awaiting reply', 'meta' => $q->project->name, 'date' => $q->sent_at, 'label' => 'Sent '.$q->sent_at->format('j M'), 'due' => $q->sent_at->diffInDays($today, true) >= 1 ? (int) $q->sent_at->diffInDays($today, true).' days waiting' : 'Today',
                 'action' => ['label' => 'Follow up', 'url' => route('quotations.show', $q)],
             ]));
-        $onSite->filter(fn ($v) => $v->expected_return_date->lte($today->copy()->addDays($remindDays)))
+        $onSite->filter(fn ($v) => $can('rotation.manage') && $v->expected_return_date->lte($today->copy()->addDays($remindDays)))
             ->each(fn ($v) => $attention->push([
                 'type' => 'visit', 'tone' => $v->expected_return_date->isBefore($today) ? 'red' : 'amber', 'icon' => 'map-pin',
                 'title' => $v->expected_return_date->isBefore($today) ? $v->employee->full_name." hasn't checked back in" : $v->employee->full_name.' due back '.($v->expected_return_date->isTomorrow() ? 'tomorrow' : $v->expected_return_date->format('j M')), 'meta' => $v->site_name, 'date' => $v->expected_return_date,
@@ -74,7 +77,7 @@ class DashboardController extends Controller
                 'due' => $v->expected_return_date->isBefore($today) ? $late($v->expected_return_date) : $v->expected_return_date->format('j M'),
                 'action' => ['label' => 'Mark returned', 'method' => 'PATCH', 'url' => route('rotation.return', $v)],
             ]));
-        InventoryItem::lowStock()->with('category')->limit(5)->get()
+        InventoryItem::lowStock()->when(! $can('inventory.view'), fn ($q) => $q->whereRaw('1 = 0'))->with('category')->limit(5)->get()
             ->each(fn ($item) => $attention->push([
                 'type' => 'stock', 'tone' => 'amber', 'icon' => 'package',
                 'title' => $item->name.' running low', 'meta' => rtrim(rtrim(number_format($item->quantity, 2), '0'), '.').' left, minimum '.rtrim(rtrim(number_format($item->min_quantity, 2), '0'), '.'), 'date' => null, 'label' => $item->category?->name ?? 'Inventory', 'due' => 'Low stock',
@@ -87,7 +90,7 @@ class DashboardController extends Controller
             fn ($a, $b) => ($a['date']?->timestamp ?? PHP_INT_MAX) <=> ($b['date']?->timestamp ?? PHP_INT_MAX),
         ])->values();
 
-        $upcoming = ProjectFollowUp::pending()->with('project', 'assignee')
+        $upcoming = ProjectFollowUp::pending()->with('project', 'assignee')->whereIn('project_id', $visible)
             ->whereBetween('due_date', [$today, $today->copy()->addDays(7)])
             ->orderBy('due_date')->get()->groupBy(fn ($f) => $f->project_id);
 
@@ -112,7 +115,10 @@ class DashboardController extends Controller
             'expenses' => $months->map(fn ($m) => (float) $expenseRows->filter(fn ($r) => $monthKey($r->expense_date) === $monthKey($m))->sum('amount'))->values(),
         ];
 
-        $activity = ActivityLog::with('user', 'project')->latest()->limit(10)->get();
+        // Without the money view, recent activity only covers the person's own projects.
+        $activity = ActivityLog::with('user', 'project')
+            ->when(! $can('dashboard.finance'), fn ($q) => $q->whereIn('project_id', $visible))
+            ->latest()->limit(10)->get();
 
         return view('dashboard', compact('stats', 'attention', 'upcoming', 'onSite', 'charts', 'activity'));
     }

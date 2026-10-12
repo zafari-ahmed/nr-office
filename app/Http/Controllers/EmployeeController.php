@@ -13,6 +13,10 @@ class EmployeeController extends Controller
 {
     public function index(Request $request)
     {
+        // Without the directory, Employees opens your own profile.
+        if (! $request->user()->hasPermission('employees.view')) {
+            return redirect()->route('account.profile');
+        }
         $employees = Employee::with('currentVisit')
             ->when($request->status !== 'all', fn ($q) => $q->active())
             ->when($request->q, fn ($q, $s) => $q->where(fn ($w) => $w->where('full_name', 'like', "%$s%")->orWhere('designation', 'like', "%$s%")->orWhere('cnic', 'like', "%$s%")))
@@ -54,13 +58,14 @@ class EmployeeController extends Controller
 
     public function show(Request $request, Employee $employee)
     {
+        $this->ensureCanSee($request, $employee);
         $employee->load('salaries', 'leaves', 'siteVisits.project', 'assets', 'attachments', 'user', 'salaryExpenses.head');
 
         return view('employees.show', [
             'employee' => $employee,
             'liveStatus' => $employee->liveStatus(),
             'tab' => $request->query('tab', 'profile'),
-            'canSeeSalary' => $request->user()->hasRole('admin', 'accounts'),
+            'canSeeSalary' => $request->user()->hasPermission('employees.salary'),
         ]);
     }
 
@@ -106,6 +111,7 @@ class EmployeeController extends Controller
     /** Upload or replace the photo straight from the profile page. */
     public function updatePhoto(Request $request, Employee $employee)
     {
+        abort_unless($request->user()->hasPermission('employees.manage') || $this->isSelf($request, $employee), 403);
         $request->validate(['photo' => self::PHOTO_RULES], ['photo.max' => 'The photo must be 4 MB or smaller.']);
         $this->savePhoto($request, $employee);
 
@@ -117,6 +123,17 @@ class EmployeeController extends Controller
         $this->deletePhoto($employee);
 
         return back()->with('success', 'Photo removed.');
+    }
+
+    private function isSelf(Request $request, Employee $employee): bool
+    {
+        return $request->user()->employee_id !== null && $request->user()->employee_id === $employee->id;
+    }
+
+    /** Your own profile, or anyone's with "See all employees". */
+    private function ensureCanSee(Request $request, Employee $employee): void
+    {
+        abort_unless($request->user()->hasPermission('employees.view') || $this->isSelf($request, $employee), 403, 'You can only open your own profile.');
     }
 
     private const PHOTO_RULES = ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'];

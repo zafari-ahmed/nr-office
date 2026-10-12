@@ -1,7 +1,7 @@
 <x-layouts.app title="Sent log">
     <x-page-header title="Sent documents log" subtitle="Quotations and invoices prepared outside the system, with the email and what was discussed.">
         <x-slot:actions>
-            <button class="btn btn-primary" @click="$store.drawer.open('log-document')"><x-icon name="plus" /> Log sent document</button>
+            @can('quotations.manage')<button class="btn btn-primary" @click="$store.drawer.open('log-document')"><x-icon name="plus" /> Log sent document</button>@endcan
         </x-slot:actions>
     </x-page-header>
 

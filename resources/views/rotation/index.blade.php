@@ -28,7 +28,7 @@
                 <a href="{{ route('rotation.index') }}" class="px-2 text-[13px] font-medium text-ink no-underline hover:no-underline" title="Back to today">{{ $rangeLabel }}</a>
                 <a href="{{ route('rotation.index', ['from' => $start->copy()->addDays(7)->format('Y-m-d'), 'days' => $days]) }}" class="grid place-items-center w-8 h-full text-ink-2 hover:text-ink" title="Later"><x-icon name="chevron-right" class="size-4" /></a>
             </div>
-            <button class="btn btn-primary" @click="$store.drawer.open('visit')"><x-icon name="plus" /> Schedule visit</button>
+            @can('rotation.manage')<button class="btn btn-primary" @click="$store.drawer.open('visit')"><x-icon name="plus" /> Schedule visit</button>@endcan
         </x-slot:actions>
     </x-page-header>
 
@@ -68,7 +68,7 @@
                                 @endphp
                                 @if ($to >= 0 && $from < $days && $to >= $from)
                                     @php $v->setRelation('employee', $emp); @endphp
-                                    <button type="button" @click="$store.drawer.open('visit-edit', {{ json_encode($editPayload($v)) }})"
+                                    <button type="button" @can('rotation.manage') @click="$store.drawer.open('visit-edit', {{ json_encode($editPayload($v)) }})" @endcan
                                          class="relative z-[1] self-center my-1.5 mx-0.5 rounded-md border px-2 py-1 leading-tight overflow-hidden text-left cursor-pointer hover:brightness-95 {{ $bar[$state] ?? $bar['scheduled'] }}"
                                          style="grid-row: 1; grid-column: {{ $from + 1 }} / {{ $to + 2 }};"
                                          title="Edit · {{ $v->site_name }} · {{ $v->departure_date->format('j M') }} → {{ $v->expected_return_date->format('j M') }} · {{ \App\Models\SiteVisit::STATUSES[$state] }}">
@@ -105,11 +105,11 @@
                             <x-avatar :name="$v->employee->full_name" :src="$v->employee->photoUrl()" size="size-8 text-[11px]" />
                             <div class="flex-1 min-w-0 leading-tight"><div class="text-[13.5px] font-medium truncate">{{ $v->employee->full_name }}</div><div class="text-[12px] text-muted truncate">{{ $v->site_name }}</div></div>
                             <span class="text-[12.5px] font-semibold text-red-fg whitespace-nowrap">{{ $late }} {{ str('day')->plural($late) }} overdue</span>
-                            <button type="button" class="btn btn-icon !size-7 !w-7" title="Edit visit" @click="$store.drawer.open('visit-edit', {{ json_encode($editPayload($v)) }})"><x-icon name="pencil" class="!size-3.5" /></button>
+                            @can('rotation.manage')<button type="button" class="btn btn-icon !size-7 !w-7" title="Edit visit" @click="$store.drawer.open('visit-edit', {{ json_encode($editPayload($v)) }})"><x-icon name="pencil" class="!size-3.5" /></button>@endcan
                         </div>
                         <div class="grid grid-cols-2 gap-2 mt-2.5">
-                            <x-action :url="route('rotation.return', $v)" block class="btn btn-secondary btn-sm">Mark returned</x-action>
-                            <x-action :url="route('rotation.extend', $v)" data-days="2" block class="btn btn-secondary btn-sm">Extend 2 days</x-action>
+                            @can('rotation.manage')<x-action :url="route('rotation.return', $v)" block class="btn btn-secondary btn-sm">Mark returned</x-action>@endcan
+                            @can('rotation.manage')<x-action :url="route('rotation.extend', $v)" data-days="2" block class="btn btn-secondary btn-sm">Extend 2 days</x-action>@endcan
                         </div>
                     </div>
                 @empty
@@ -129,12 +129,12 @@
                             <x-avatar :name="$v->employee->full_name" :src="$v->employee->photoUrl()" size="size-8 text-[11px]" />
                             <div class="flex-1 min-w-0 leading-tight"><div class="text-[13.5px] font-medium truncate">{{ $v->employee->full_name }}</div><div class="text-[12px] text-muted truncate">{{ $v->site_name }}</div></div>
                             <span class="text-[12.5px] font-semibold text-amber-fg whitespace-nowrap">{{ $due->isToday() ? 'Today' : ($due->isTomorrow() ? 'Tomorrow' : $due->format('j M')) }}</span>
-                            <button type="button" class="btn btn-icon !size-7 !w-7" title="Edit visit" @click="$store.drawer.open('visit-edit', {{ json_encode($editPayload($v)) }})"><x-icon name="pencil" class="!size-3.5" /></button>
+                            @can('rotation.manage')<button type="button" class="btn btn-icon !size-7 !w-7" title="Edit visit" @click="$store.drawer.open('visit-edit', {{ json_encode($editPayload($v)) }})"><x-icon name="pencil" class="!size-3.5" /></button>@endcan
                         </div>
                         <div class="bar mt-2.5"><span class="{{ $dayN / $total > .85 ? 'bg-amber-fg' : 'bg-blue-fg' }}" style="width: {{ round($dayN / $total * 100) }}%"></span></div>
                         <div class="flex items-center justify-between mt-1.5 text-[12px] text-muted">
                             <span>Day {{ $dayN }} of {{ $total }}</span>
-                            <x-action :url="route('rotation.return', $v)" class="text-[12px] font-medium text-accent hover:underline cursor-pointer">Mark returned</x-action>
+                            @can('rotation.manage')<x-action :url="route('rotation.return', $v)" class="text-[12px] font-medium text-accent hover:underline cursor-pointer">Mark returned</x-action>@endcan
                         </div>
                     </div>
                 @empty
@@ -147,9 +147,9 @@
                     <div class="flex items-center gap-2.5 px-4 py-2.5 border-b border-line-2 last:border-b-0">
                         <x-avatar :name="$v->employee->full_name" size="size-7 text-[10px]" />
                         <div class="flex-1 min-w-0 leading-tight"><div class="text-[13.5px] font-medium truncate">{{ $v->employee->full_name }}</div><div class="text-[12px] text-muted truncate">{{ $v->site_name }} · leaves {{ $v->departure_date->format('j M') }}</div></div>
-                        <button type="button" class="btn btn-icon !size-7 !w-7" title="Edit visit" @click="$store.drawer.open('visit-edit', {{ json_encode($editPayload($v)) }})"><x-icon name="pencil" class="!size-3.5" /></button>
-                        <x-action :url="route('rotation.depart', $v)" class="btn btn-secondary btn-xs">Departed</x-action>
-                        <x-action :url="route('rotation.cancel', $v)" confirm="Cancel this visit?" class="btn btn-icon !size-7 !w-7" title="Cancel visit"><x-icon name="x" class="!size-3.5" /></x-action>
+                        @can('rotation.manage')<button type="button" class="btn btn-icon !size-7 !w-7" title="Edit visit" @click="$store.drawer.open('visit-edit', {{ json_encode($editPayload($v)) }})"><x-icon name="pencil" class="!size-3.5" /></button>@endcan
+                        @can('rotation.manage')<x-action :url="route('rotation.depart', $v)" class="btn btn-secondary btn-xs">Departed</x-action>@endcan
+                        @can('rotation.manage')<x-action :url="route('rotation.cancel', $v)" confirm="Cancel this visit?" class="btn btn-icon !size-7 !w-7" title="Cancel visit"><x-icon name="x" class="!size-3.5" /></x-action>@endcan
                     </div>
                 @empty
                     <p class="px-4 py-3.5 text-[13px] text-muted">Nothing scheduled.</p>

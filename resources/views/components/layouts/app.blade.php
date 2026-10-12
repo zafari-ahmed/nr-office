@@ -1,18 +1,27 @@
 @php
-    $nav = [
-        ['Dashboard', 'dashboard', 'layout-dashboard', ['dashboard'], 0, ''],
-        ['Projects', 'projects.index', 'folder-kanban', ['projects.*', 'clients.*'], 0, ''],
-        ['Quotations', 'quotations.index', 'file-text', ['quotations.*', 'document-logs.*'], 0, ''],
-        ['Invoices', 'invoices.index', 'receipt', ['invoices.*'], $shellOverdueInvoices ?? 0, 'red'],
-        ['Expenses', 'expenses.index', 'wallet', ['expenses.*'], $shellPendingExpenses ?? 0, 'amber'],
-        ['Inventory', 'inventory.index', 'package', ['inventory.*'], 0, ''],
-        ['Employees', 'employees.index', 'users', ['employees.*'], 0, ''],
-        ['Site Rotation', 'rotation.index', 'calendar-range', ['rotation.*'], $shellOverdueVisits ?? 0, 'red'],
-    ];
     $user = auth()->user();
-    if ($user->hasRole('admin', 'manager', 'accounts')) {
-        $nav[] = ['Reports', 'reports.index', 'bar-chart-3', ['reports.*'], 0, ''];
-    }
+    // [label, route, icon, active patterns, badge, badge tone, permission needed (null = everyone)]
+    $nav = collect([
+        ['Dashboard', 'dashboard', 'layout-dashboard', ['dashboard'], 0, '', null],
+        ['Projects', 'projects.index', 'folder-kanban', ['projects.*', 'clients.*'], 0, '', null],
+        ['Quotations', 'quotations.index', 'file-text', ['quotations.*', 'document-logs.*'], 0, '', 'quotations.view'],
+        ['Invoices', 'invoices.index', 'receipt', ['invoices.*'], $shellOverdueInvoices ?? 0, 'red', 'invoices.view'],
+        [$user->hasPermission('expenses.view_all') ? 'Expenses' : 'My expenses', 'expenses.index', 'wallet', ['expenses.*'], $shellPendingExpenses ?? 0, 'amber', null],
+        ['Inventory', 'inventory.index', 'package', ['inventory.*'], 0, '', 'inventory.view'],
+        ['Employees', 'employees.index', 'users', ['employees.*'], 0, '', 'employees.view'],
+        ['Site Rotation', 'rotation.index', 'calendar-range', ['rotation.*'], $shellOverdueVisits ?? 0, 'red', 'rotation.view'],
+        ['Reports', 'reports.index', 'bar-chart-3', ['reports.*'], 0, '', 'reports.view'],
+    ])->filter(fn ($item) => ! $item[6] || $user->hasPermission($item[6]))->values();
+    $canSettings = collect(array_keys(\App\Http\Controllers\SettingsController::SECTIONS))->contains(fn ($s) => \App\Http\Controllers\SettingsController::allowed($user, $s));
+    // "+ New" menu: [label, icon, link or drawer, permission]
+    $newItems = collect([
+        ['Project', 'folder-kanban', route('projects.create'), 'projects.manage'],
+        ['Quotation', 'file-text', route('quotations.create'), 'quotations.manage'],
+        ['Invoice', 'receipt', route('invoices.create'), 'invoices.manage'],
+        ['Expense', 'wallet', 'drawer:expense', null],
+        ['Follow-up', 'phone-call', 'drawer:follow-up', null],
+        ['Log sent document', 'mail', 'drawer:log-document', 'quotations.manage'],
+    ])->filter(fn ($item) => ! $item[3] || $user->hasPermission($item[3]))->values();
 @endphp
 <!DOCTYPE html>
 <html lang="en">
@@ -56,7 +65,7 @@
                     @endif
                 </a>
             @endforeach
-            @if ($user->hasRole('admin', 'manager'))
+            @if ($canSettings)
                 <a href="{{ route('settings.index') }}" @class(['nav-link', 'nav-active' => request()->routeIs('settings.*')]) title="Settings">
                     <x-icon name="settings" /><span class="sb-label">Settings</span>
                 </a>
@@ -69,7 +78,7 @@
                 <span class="sb-label">Collapse</span>
             </button>
             <div class="sb-user flex items-center gap-2.5 px-1.5 pt-2">
-                <x-avatar :name="$user->name" size="size-[30px] text-[11.5px]" />
+                <x-avatar :name="$user->name" :src="$user->employee?->photoUrl()" size="size-[30px] text-[11.5px]" />
                 <div class="sb-label min-w-0 flex-1">
                     <div class="text-[13px] font-medium truncate">{{ $user->name }}</div>
                     <div class="text-[11.5px] text-muted">{{ \App\Models\User::ROLES[$user->role] ?? $user->role }}</div>
@@ -156,16 +165,38 @@
                 <div x-data="{ open: false }" class="relative">
                     <button class="btn btn-primary" @click="open = !open"><x-icon name="plus" /><span class="hidden sm:inline">New</span><x-icon name="chevron-down" class="hidden sm:block !size-3.5" /></button>
                     <div x-cloak x-show="open" @click.outside="open = false" x-transition class="absolute right-0 mt-2 w-56 card p-1.5 z-40">
-                        <a href="{{ route('projects.create') }}" class="nav-link"><x-icon name="folder-kanban" /> Project</a>
-                        <a href="{{ route('quotations.create') }}" class="nav-link"><x-icon name="file-text" /> Quotation</a>
-                        <a href="{{ route('invoices.create') }}" class="nav-link"><x-icon name="receipt" /> Invoice</a>
-                        <button class="nav-link w-full" @click="open = false; $store.drawer.open('expense')"><x-icon name="wallet" /> Expense</button>
-                        <button class="nav-link w-full" @click="open = false; $store.drawer.open('follow-up')"><x-icon name="phone-call" /> Follow-up</button>
-                        <button class="nav-link w-full" @click="open = false; $store.drawer.open('log-document')"><x-icon name="mail" /> Log sent document</button>
+                        @foreach ($newItems as [$label, $icon, $target])
+                            @if (str_starts_with($target, 'drawer:'))
+                                <button class="nav-link w-full" @click="open = false; $store.drawer.open('{{ substr($target, 7) }}')"><x-icon :name="$icon" /> {{ $label }}</button>
+                            @else
+                                <a href="{{ $target }}" class="nav-link"><x-icon :name="$icon" /> {{ $label }}</a>
+                            @endif
+                        @endforeach
                     </div>
                 </div>
 
-                <x-avatar :name="$user->name" size="size-8 text-[11.5px] ml-1.5" />
+                <div x-data="{ open: false }" class="relative ml-1.5" @keydown.escape="open = false">
+                    <button class="flex items-center gap-1 rounded-full focus-visible:ring-2 focus-visible:ring-accent/40" @click="open = !open" :aria-expanded="open" aria-label="Account menu">
+                        <x-avatar :name="$user->name" :src="$user->employee?->photoUrl()" size="size-8 text-[11.5px]" />
+                        <x-icon name="chevron-down" class="hidden sm:block !size-3.5 text-muted" />
+                    </button>
+                    <div x-cloak x-show="open" @click.outside="open = false" x-transition class="absolute right-0 mt-2 w-60 card p-1.5 z-40">
+                        <div class="flex items-center gap-2.5 px-2.5 py-2 mb-1 border-b border-line-2">
+                            <x-avatar :name="$user->name" :src="$user->employee?->photoUrl()" size="size-9 text-[12px]" />
+                            <div class="min-w-0">
+                                <div class="text-[13.5px] font-medium truncate">{{ $user->name }}</div>
+                                <div class="text-[12px] text-muted truncate">{{ $user->email }}</div>
+                            </div>
+                        </div>
+                        <a href="{{ route('account.profile') }}" class="nav-link"><x-icon name="user" /> My profile</a>
+                        <a href="{{ route('account.edit') }}#profile" class="nav-link"><x-icon name="pencil" /> Edit profile</a>
+                        <a href="{{ route('account.edit') }}#password" class="nav-link"><x-icon name="key-round" /> Change password</a>
+                        <form method="POST" action="{{ route('logout') }}" class="mt-1 pt-1 border-t border-line-2">
+                            @csrf
+                            <button class="nav-link w-full text-red-fg hover:text-red-fg"><x-icon name="log-out" /> Log out</button>
+                        </form>
+                    </div>
+                </div>
             </div>
         </header>
 
@@ -176,7 +207,7 @@
 
     {{-- Mobile bottom tabs + floating add --}}
     <nav class="no-print lg:hidden fixed bottom-0 inset-x-0 z-30 bg-surface border-t border-line grid grid-cols-5 h-16">
-        @foreach ([['Dashboard', 'dashboard', 'layout-dashboard', 'dashboard'], ['Projects', 'projects.index', 'folder-kanban', 'projects.*'], ['Rotation', 'rotation.index', 'calendar-range', 'rotation.*'], ['Expenses', 'expenses.index', 'wallet', 'expenses.*']] as [$label, $route, $icon, $pattern])
+        @foreach (array_filter([['Dashboard', 'dashboard', 'layout-dashboard', 'dashboard'], ['Projects', 'projects.index', 'folder-kanban', 'projects.*'], $user->hasPermission('rotation.view') ? ['Rotation', 'rotation.index', 'calendar-range', 'rotation.*'] : ['Profile', 'account.profile', 'user', 'employees.*'], ['Expenses', 'expenses.index', 'wallet', 'expenses.*']]) as [$label, $route, $icon, $pattern])
             <a href="{{ route($route) }}" @class(['flex flex-col items-center justify-center gap-0.5 text-[11px]', 'text-accent' => request()->routeIs($pattern), 'text-muted' => ! request()->routeIs($pattern)])>
                 <x-icon :name="$icon" class="size-5" />{{ $label }}
             </a>
@@ -188,19 +219,22 @@
     </button>
     <x-drawer name="quick-add" title="Quick add" width="max-w-sm">
         <div class="grid grid-cols-2 gap-3">
-            <a href="{{ route('projects.create') }}" class="card card-pad flex flex-col items-center gap-2 text-sm"><x-icon name="folder-kanban" class="size-5 text-accent" />Project</a>
-            <a href="{{ route('quotations.create') }}" class="card card-pad flex flex-col items-center gap-2 text-sm"><x-icon name="file-text" class="size-5 text-accent" />Quotation</a>
-            <a href="{{ route('invoices.create') }}" class="card card-pad flex flex-col items-center gap-2 text-sm"><x-icon name="receipt" class="size-5 text-accent" />Invoice</a>
-            <button class="card card-pad flex flex-col items-center gap-2 text-sm" @click="$store.drawer.open('expense')"><x-icon name="wallet" class="size-5 text-accent" />Expense</button>
-            <button class="card card-pad flex flex-col items-center gap-2 text-sm" @click="$store.drawer.open('follow-up')"><x-icon name="phone-call" class="size-5 text-accent" />Follow-up</button>
-            <button class="card card-pad flex flex-col items-center gap-2 text-sm" @click="$store.drawer.open('log-document')"><x-icon name="mail" class="size-5 text-accent" />Log document</button>
+            @foreach ($newItems as [$label, $icon, $target])
+                @if (str_starts_with($target, 'drawer:'))
+                    <button class="card card-pad flex flex-col items-center gap-2 text-sm" @click="$store.drawer.open('{{ substr($target, 7) }}')"><x-icon :name="$icon" class="size-5 text-accent" />{{ $label }}</button>
+                @else
+                    <a href="{{ $target }}" class="card card-pad flex flex-col items-center gap-2 text-sm"><x-icon :name="$icon" class="size-5 text-accent" />{{ $label }}</a>
+                @endif
+            @endforeach
         </div>
     </x-drawer>
 
     {{-- Global drawers used by the "+ New" menu --}}
     @include('partials.drawers.expense', ['projects' => $quickProjects, 'heads' => $quickHeads, 'employees' => $quickEmployees])
     @include('partials.drawers.follow-up', ['projects' => $quickProjects, 'users' => $quickUsers, 'project' => null])
-    @include('partials.drawers.log-document', ['projects' => $quickProjects, 'project' => null])
+    @can('quotations.manage')
+        @include('partials.drawers.log-document', ['projects' => $quickProjects, 'project' => null])
+    @endcan
     {{ $drawers ?? '' }}
 
     {{-- Toasts --}}

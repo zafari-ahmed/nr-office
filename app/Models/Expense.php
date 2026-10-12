@@ -52,4 +52,15 @@ class Expense extends Model
     {
         return $this->belongsTo(User::class, 'approved_by');
     }
+
+    /** Everyone's expenses, or only the ones this person added or that are for them. */
+    public function scopeVisibleTo($query, User $user)
+    {
+        if ($user->hasPermission('expenses.view_all')) {
+            return $query;
+        }
+
+        return $query->where(fn ($q) => $q->where('created_by', $user->id)
+            ->when($user->employee_id, fn ($q) => $q->orWhere('employee_id', $user->employee_id)));
+    }
 }

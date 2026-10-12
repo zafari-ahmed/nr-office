@@ -10,7 +10,7 @@
             </div>
             <p class="text-muted mt-1">{{ $item->category?->name }}{{ $item->asset_tag ? ' · '.$item->asset_tag : '' }}{{ $item->location ? ' · '.$item->location : '' }}</p>
         </div>
-        <div class="flex gap-2">
+        <div @class(['flex gap-2', 'hidden' => ! auth()->user()->hasPermission('inventory.manage')])>
             <button class="btn btn-secondary" @click="$store.drawer.open('edit-item')"><x-icon name="pencil" /> Edit</button>
             <button class="btn btn-primary" @click="$store.drawer.open('movement')"><x-icon name="arrow-right-left" /> {{ $item->type === 'asset' ? 'Assign / move' : 'Stock in / out' }}</button>
         </div>
@@ -48,7 +48,7 @@
                 <div class="flex justify-between"><span class="text-muted">Warranty</span><span @class(['text-red-fg' => $item->warranty_until?->isPast()])>{{ $item->warranty_until?->format('d M Y') ?? '—' }}</span></div>
             @endif
             @if ($item->notes)<p class="pt-2 border-t border-line text-muted whitespace-pre-line">{{ $item->notes }}</p>@endif
-            <x-action :url="route('inventory.destroy', $item)" method="DELETE" confirm="Remove this item?" class="btn btn-ghost btn-sm w-full mt-2 hover:text-red-fg"><x-icon name="trash-2" /> Remove item</x-action>
+            @can('inventory.manage')<x-action :url="route('inventory.destroy', $item)" method="DELETE" confirm="Remove this item?" class="btn btn-ghost btn-sm w-full mt-2 hover:text-red-fg"><x-icon name="trash-2" /> Remove item</x-action>@endcan
         </aside>
     </div>
 

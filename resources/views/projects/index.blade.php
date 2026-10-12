@@ -1,13 +1,16 @@
 <x-layouts.app title="Projects">
-    @php $total = $counts->sum(); @endphp
-    <x-page-header title="Projects" :subtitle="$total.' '.str('project')->plural($total).' · '.\App\Models\Setting::get('finance.currency').' '.money_short($totalValue).' total value'">
+    @php
+        $total = $counts->sum();
+        $canMoney = auth()->user()->hasPermission('invoices.view');
+    @endphp
+    <x-page-header :title="auth()->user()->hasPermission('projects.view_all') ? 'Projects' : 'My projects'" :subtitle="$total.' '.str('project')->plural($total).($canMoney ? ' · '.\App\Models\Setting::get('finance.currency').' '.money_short($totalValue).' total value' : '')">
         <x-slot:actions>
-            <a href="{{ route('clients.index') }}" class="btn btn-ghost"><x-icon name="building-2" /> Clients</a>
+            @can('projects.manage')<a href="{{ route('clients.index') }}" class="btn btn-ghost"><x-icon name="building-2" /> Clients</a>@endcan
             <div class="seg">
                 <a href="{{ route('projects.index', ['view' => 'table'] + request()->except('view', 'page')) }}" @class(['seg-item', 'seg-active' => $view !== 'board'])>Table</a>
                 <a href="{{ route('projects.index', ['view' => 'board'] + request()->except('view', 'page')) }}" @class(['seg-item', 'seg-active' => $view === 'board'])>Board</a>
             </div>
-            <a href="{{ route('projects.create') }}" class="btn btn-primary"><x-icon name="plus" /> New project</a>
+            @can('projects.manage')<a href="{{ route('projects.create') }}" class="btn btn-primary"><x-icon name="plus" /> New project</a>@endcan
         </x-slot:actions>
     </x-page-header>
 
@@ -44,7 +47,7 @@
                                 <div class="font-medium leading-snug">{{ $p->name }}</div>
                                 <div class="text-xs text-muted mt-0.5">{{ $p->client?->displayName() }}</div>
                                 <div class="flex items-center justify-between mt-3 text-xs">
-                                    <span class="font-medium tabular-nums">{{ money($p->project_value) }}</span>
+                                    <span class="font-medium tabular-nums">{{ $canMoney ? money($p->project_value) : '' }}</span>
                                     @if ($p->nextFollowUp)
                                         <span @class(['inline-flex items-center gap-1', 'text-red-fg' => $p->nextFollowUp->isOverdue(), 'text-muted' => ! $p->nextFollowUp->isOverdue()])>
                                             <x-icon name="calendar-clock" class="size-3.5" />{{ $p->nextFollowUp->due_date->format('d M') }}
@@ -63,25 +66,31 @@
         <div class="card overflow-hidden">
             <div class="overflow-x-auto">
                 <table class="table">
-                    <thead><tr><th>Project</th><th>Client</th><th>Status</th><th class="text-right">Value</th><th>Next follow-up</th><th class="text-right">Outstanding</th><th>Lead</th></tr></thead>
+                    <thead><tr><th>Project</th><th>Client</th><th>Status</th>@if ($canMoney)<th class="text-right">Value</th>@endif<th>Next follow-up</th>@if ($canMoney)<th class="text-right">Outstanding</th>@endif<th>Lead</th></tr></thead>
                     <tbody>
                     @forelse ($projects as $p)
                         <tr class="cursor-pointer" onclick="location='{{ route('projects.show', $p) }}'">
                             <td><div class="font-medium">{{ $p->name }}</div><div class="font-mono text-[11.5px] text-muted mt-0.5">{{ $p->code }}</div></td>
                             <td class="text-ink-2">{{ $p->client?->displayName() ?? '—' }}</td>
                             <td><x-pill :status="$p->status" :label="\App\Models\Project::STATUSES[$p->status]" /></td>
-                            <td class="text-right tabular-nums font-medium">{{ money($p->project_value) }}</td>
+                            @if ($canMoney)<td class="text-right tabular-nums font-medium">{{ money($p->project_value) }}</td>@endif
                             <td>
                                 @if ($p->nextFollowUp)
                                     @php $fu = $p->nextFollowUp->due_date; @endphp
                                     <span @class(['font-medium text-red-fg' => $fu->isPast() && ! $fu->isToday(), 'text-amber-fg' => $fu->between(today(), today()->addDays(2)), 'text-ink-2' => $fu->gt(today()->addDays(2))]) title="{{ $p->nextFollowUp->title }}">{{ $fu->format('j M') }}</span>
                                 @else <span class="text-muted">—</span> @endif
                             </td>
-                            <td class="text-right tabular-nums {{ $p->outstanding > 0 ? 'text-ink' : 'text-muted' }}">{{ $p->outstanding > 0 ? money($p->outstanding) : '—' }}</td>
+                            @if ($canMoney)<td class="text-right tabular-nums {{ $p->outstanding > 0 ? 'text-ink' : 'text-muted' }}">{{ $p->outstanding > 0 ? money($p->outstanding) : '—' }}</td>@endif
                             <td>@if ($p->manager)<x-avatar :name="$p->manager->name" size="size-[26px] text-[10px]" />@else <span class="text-muted">—</span> @endif</td>
                         </tr>
                     @empty
-                        <tr><td colspan="7"><x-empty icon="folder-kanban" title="No projects found" text="Create your first project to start tracking quotes, invoices and follow-ups."><a href="{{ route('projects.create') }}" class="btn btn-primary">New project</a></x-empty></td></tr>
+                        <tr><td colspan="7">
+                            @can('projects.manage')
+                                <x-empty icon="folder-kanban" title="No projects found" text="Create your first project to start tracking quotes, invoices and follow-ups."><a href="{{ route('projects.create') }}" class="btn btn-primary">New project</a></x-empty>
+                            @else
+                                <x-empty icon="folder-kanban" title="No projects yet" text="Projects you are added to as a team member will show here." />
+                            @endcan
+                        </td></tr>
                     @endforelse
                     </tbody>
                 </table>
