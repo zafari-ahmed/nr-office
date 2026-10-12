@@ -60,12 +60,40 @@ class SiteVisitController extends Controller
         return back()->with('success', 'Visit scheduled. Return date '.$visit->expected_return_date->format('d M Y').'.');
     }
 
+    /**
+     * Edit any visit that isn't cancelled: change who, where and the dates, or end it early by giving a return date.
+     * Status follows the dates: a departure in the future means scheduled, today or earlier means on site.
+     */
     public function update(Request $request, SiteVisit $visit)
     {
+        abort_if($visit->status === 'cancelled', 422, 'Cancelled visits cannot be edited.');
         $data = $this->validated($request);
-        $visit->update([...$data, 'expected_return_date' => SiteVisit::returnDateFor(Carbon::parse($data['departure_date']), (int) $data['planned_days'])]);
+        $extra = $request->validate([
+            'returned_on' => ['nullable', 'date', 'after_or_equal:departure_date', 'before_or_equal:today'],
+        ]);
+        $departure = Carbon::parse($data['departure_date']);
+        $expected = SiteVisit::returnDateFor($departure, (int) $data['planned_days']);
 
-        return back()->with('success', 'Visit updated.');
+        $status = $departure->gt(today()) ? 'scheduled' : 'on_site';
+        $returnedOn = $extra['returned_on'] ?? null;
+        if ($returnedOn) {
+            $status = 'returned';
+        }
+
+        $visit->update([
+            ...$data,
+            'site_name' => $data['site_name'] ?: Project::find($data['project_id'])?->name ?? $visit->site_name,
+            'expected_return_date' => $expected,
+            'status' => $status,
+            'actual_return_date' => $returnedOn,
+            'reminder_sent_at' => $visit->expected_return_date->equalTo($expected) ? $visit->reminder_sent_at : null,
+        ]);
+        $visit->load('employee');
+        Activity::log('visit_updated', $returnedOn
+            ? "{$visit->employee->full_name} returned from {$visit->site_name} on ".Carbon::parse($returnedOn)->format('d M')
+            : "{$visit->employee->full_name}'s visit to {$visit->site_name} changed to ".$departure->format('d M').' → '.$expected->format('d M'), $visit);
+
+        return back()->with('success', $returnedOn ? 'Visit ended on '.Carbon::parse($returnedOn)->format('d M').'.' : 'Visit updated. Return date '.$expected->format('d M Y').'.');
     }
 
     public function depart(SiteVisit $visit)
@@ -76,9 +104,11 @@ class SiteVisitController extends Controller
         return back()->with('success', 'Marked as on site.');
     }
 
-    public function markReturned(SiteVisit $visit)
+    public function markReturned(Request $request, SiteVisit $visit)
     {
-        $visit->update(['status' => 'returned', 'actual_return_date' => today()]);
+        $on = $request->validate(['returned_on' => ['nullable', 'date', 'before_or_equal:today']])['returned_on'] ?? null;
+        $on = $on ? max(Carbon::parse($on), $visit->departure_date) : today();
+        $visit->update(['status' => 'returned', 'actual_return_date' => $on]);
         Activity::log('visit_returned', "{$visit->employee->full_name} returned from {$visit->site_name}", $visit);
 
         return back()->with('success', $visit->employee->full_name.' marked as returned.');

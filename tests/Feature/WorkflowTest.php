@@ -147,6 +147,32 @@ class WorkflowTest extends TestCase
         $this->assertSame('returned', $visit->fresh()->status);
     }
 
+    public function test_site_visit_can_be_edited_and_ended_early(): void
+    {
+        $emp = Employee::create(['employee_code' => 'EMP-001', 'full_name' => 'Ahmed Raza', 'employment_type' => 'permanent', 'status' => 'active', 'is_site_staff' => true]);
+        $this->post('/rotation', ['employee_id' => $emp->id, 'site_name' => 'DHA', 'departure_date' => today()->addDays(3)->toDateString(), 'planned_days' => 7]);
+        $visit = SiteVisit::first();
+        $this->assertSame('scheduled', $visit->status);
+
+        // Change the dates of the scheduled visit: leaving today makes it on site.
+        $base = ['employee_id' => $emp->id, 'site_name' => 'DHA Phase 6', 'planned_days' => 5];
+        $this->put("/rotation/{$visit->id}", $base + ['departure_date' => today()->subDays(2)->toDateString()])->assertSessionHasNoErrors();
+        $visit->refresh();
+        $this->assertSame('on_site', $visit->status);
+        $this->assertSame('DHA Phase 6', $visit->site_name);
+        $this->assertSame(today()->addDays(3)->toDateString(), $visit->expected_return_date->toDateString());
+
+        // End it early, yesterday.
+        $this->put("/rotation/{$visit->id}", $base + ['departure_date' => today()->subDays(2)->toDateString(), 'returned_on' => today()->subDay()->toDateString()])->assertSessionHasNoErrors();
+        $visit->refresh();
+        $this->assertSame('returned', $visit->status);
+        $this->assertSame(today()->subDay()->toDateString(), $visit->actual_return_date->toDateString());
+
+        // A return date before departure or in the future is refused.
+        $this->put("/rotation/{$visit->id}", $base + ['departure_date' => today()->subDays(2)->toDateString(), 'returned_on' => today()->addDay()->toDateString()])->assertSessionHasErrors('returned_on');
+        $this->get('/rotation')->assertOk()->assertSee('Edit site visit');
+    }
+
     public function test_expense_by_staff_needs_approval(): void
     {
         $staff = User::create(['name' => 'Staff', 'email' => 's@nr.pk', 'password' => 'password', 'role' => 'staff']);

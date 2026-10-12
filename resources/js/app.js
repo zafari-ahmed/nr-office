@@ -81,23 +81,45 @@ Alpine.data('palette', () => ({
 }));
 
 /* Site rotation drawer: return date = departure + days. */
+/* Return date = departure + days (weekdays only when weekends aren't counted). Mirrors SiteVisit::returnDateFor. */
+function returnDate(departure, days, countWeekends) {
+    if (!departure || !days) return null;
+    const d = new Date(departure + 'T00:00:00');
+    if (countWeekends) {
+        d.setDate(d.getDate() + Number(days));
+    } else {
+        for (let left = Number(days); left > 0;) {
+            d.setDate(d.getDate() + 1);
+            if (d.getDay() !== 0 && d.getDay() !== 6) left--;
+        }
+    }
+    return d;
+}
+const longDate = (d) => (d ? d.toLocaleDateString('en-GB', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' }) : '');
+const isoToday = () => { const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 10); };
+
+/* Site rotation: schedule drawer. */
 Alpine.data('visitForm', (defaults) => ({
     departure: defaults.departure,
     days: defaults.days,
     countWeekends: defaults.countWeekends !== false,
-    get returnDate() {
-        if (!this.departure || !this.days) return '';
-        const d = new Date(this.departure + 'T00:00:00');
-        if (this.countWeekends) {
-            d.setDate(d.getDate() + Number(this.days));
-        } else {
-            for (let left = Number(this.days); left > 0;) {
-                d.setDate(d.getDate() + 1);
-                if (d.getDay() !== 0 && d.getDay() !== 6) left--;
-            }
-        }
-        return d.toLocaleDateString('en-GB', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' });
+    get returnDate() { return longDate(returnDate(this.departure, this.days, this.countWeekends)); },
+}));
+
+/* Site rotation: edit drawer, filled from the visit passed to $store.drawer.open('visit-edit', visit). */
+Alpine.data('visitEdit', (defaults) => ({
+    v: {},
+    ended: false,
+    today: isoToday(),
+    countWeekends: defaults.countWeekends !== false,
+    init() {
+        this.$watch('$store.drawer.payload', (p) => {
+            if (this.$store.drawer.name !== 'visit-edit') return;
+            this.v = { ...p };
+            this.ended = !!p.returned_on;
+        });
     },
+    get returnLabel() { return longDate(returnDate(this.v.departure, this.v.days, this.countWeekends)); },
 }));
 
 /* Drag-and-drop multi-file input. */

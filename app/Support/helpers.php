@@ -59,6 +59,7 @@ if (! function_exists('activity_style')) {
             'visit_departed', 'visit_scheduled' => ['map-pin', 'blue'],
             'visit_returned' => ['corner-down-left', 'grey'],
             'visit_extended' => ['calendar-plus', 'amber'],
+            'visit_updated' => ['pencil', 'blue'],
             'follow_up_added' => ['phone', 'amber'],
             'follow_up_done', 'approved', 'converted' => ['check', 'green'],
             'files_uploaded' => ['upload', 'grey'],

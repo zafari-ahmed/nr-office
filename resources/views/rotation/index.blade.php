@@ -10,6 +10,14 @@
         ];
         $todayIdx = (int) $start->diffInDays(today(), false);
         $col = 'minmax(26px, 1fr)';
+ // Data the edit drawer needs for one visit.
+        $editPayload = fn ($v) => [
+            'url' => route('rotation.update', $v), 'status' => $v->status, 'employee' => $v->employee?->full_name,
+            'employee_id' => (string) $v->employee_id, 'project_id' => (string) ($v->project_id ?? ''),
+            'site_name' => $v->site_name, 'site_address' => $v->site_address ?? '', 'purpose' => $v->purpose ?? '', 'notes' => $v->notes ?? '',
+            'departure' => $v->departure_date->format('Y-m-d'), 'days' => $v->planned_days,
+            'returned_on' => $v->actual_return_date?->format('Y-m-d') ?? '',
+        ];
         $rangeLabel = $start->format('M') === $end->format('M') ? $start->format('j').' – '.$end->format('j M Y') : $start->format('j M').' – '.$end->format('j M Y');
     @endphp
 
@@ -59,12 +67,14 @@
                                     $sub = match ($state) { 'returned' => 'returned', 'overdue' => 'due '.$v->expected_return_date->format('j M'), default => '→ '.$v->expected_return_date->format('j M') };
                                 @endphp
                                 @if ($to >= 0 && $from < $days && $to >= $from)
-                                    <div class="relative z-[1] self-center my-1.5 mx-0.5 rounded-md border px-2 py-1 leading-tight overflow-hidden {{ $bar[$state] ?? $bar['scheduled'] }}"
+                                    @php $v->setRelation('employee', $emp); @endphp
+                                    <button type="button" @click="$store.drawer.open('visit-edit', {{ json_encode($editPayload($v)) }})"
+                                         class="relative z-[1] self-center my-1.5 mx-0.5 rounded-md border px-2 py-1 leading-tight overflow-hidden text-left cursor-pointer hover:brightness-95 {{ $bar[$state] ?? $bar['scheduled'] }}"
                                          style="grid-row: 1; grid-column: {{ $from + 1 }} / {{ $to + 2 }};"
-                                         title="{{ $v->site_name }} · {{ $v->departure_date->format('j M') }} → {{ $v->expected_return_date->format('j M') }} · {{ \App\Models\SiteVisit::STATUSES[$state] }}">
-                                        <div class="text-[12px] font-semibold truncate">{{ $v->site_name }}</div>
-                                        <div class="text-[11px] opacity-80 truncate">{{ $sub }}</div>
-                                    </div>
+                                         title="Edit · {{ $v->site_name }} · {{ $v->departure_date->format('j M') }} → {{ $v->expected_return_date->format('j M') }} · {{ \App\Models\SiteVisit::STATUSES[$state] }}">
+                                        <span class="block text-[12px] font-semibold truncate">{{ $v->site_name }}</span>
+                                        <span class="block text-[11px] opacity-80 truncate">{{ $sub }}</span>
+                                    </button>
                                 @endif
                             @endforeach
                         </div>
@@ -95,6 +105,7 @@
                             <x-avatar :name="$v->employee->full_name" :src="$v->employee->photoUrl()" size="size-8 text-[11px]" />
                             <div class="flex-1 min-w-0 leading-tight"><div class="text-[13.5px] font-medium truncate">{{ $v->employee->full_name }}</div><div class="text-[12px] text-muted truncate">{{ $v->site_name }}</div></div>
                             <span class="text-[12.5px] font-semibold text-red-fg whitespace-nowrap">{{ $late }} {{ str('day')->plural($late) }} overdue</span>
+                            <button type="button" class="btn btn-icon !size-7 !w-7" title="Edit visit" @click="$store.drawer.open('visit-edit', {{ json_encode($editPayload($v)) }})"><x-icon name="pencil" class="!size-3.5" /></button>
                         </div>
                         <div class="grid grid-cols-2 gap-2 mt-2.5">
                             <x-action :url="route('rotation.return', $v)" block class="btn btn-secondary btn-sm">Mark returned</x-action>
@@ -118,6 +129,7 @@
                             <x-avatar :name="$v->employee->full_name" :src="$v->employee->photoUrl()" size="size-8 text-[11px]" />
                             <div class="flex-1 min-w-0 leading-tight"><div class="text-[13.5px] font-medium truncate">{{ $v->employee->full_name }}</div><div class="text-[12px] text-muted truncate">{{ $v->site_name }}</div></div>
                             <span class="text-[12.5px] font-semibold text-amber-fg whitespace-nowrap">{{ $due->isToday() ? 'Today' : ($due->isTomorrow() ? 'Tomorrow' : $due->format('j M')) }}</span>
+                            <button type="button" class="btn btn-icon !size-7 !w-7" title="Edit visit" @click="$store.drawer.open('visit-edit', {{ json_encode($editPayload($v)) }})"><x-icon name="pencil" class="!size-3.5" /></button>
                         </div>
                         <div class="bar mt-2.5"><span class="{{ $dayN / $total > .85 ? 'bg-amber-fg' : 'bg-blue-fg' }}" style="width: {{ round($dayN / $total * 100) }}%"></span></div>
                         <div class="flex items-center justify-between mt-1.5 text-[12px] text-muted">
@@ -135,6 +147,7 @@
                     <div class="flex items-center gap-2.5 px-4 py-2.5 border-b border-line-2 last:border-b-0">
                         <x-avatar :name="$v->employee->full_name" size="size-7 text-[10px]" />
                         <div class="flex-1 min-w-0 leading-tight"><div class="text-[13.5px] font-medium truncate">{{ $v->employee->full_name }}</div><div class="text-[12px] text-muted truncate">{{ $v->site_name }} · leaves {{ $v->departure_date->format('j M') }}</div></div>
+                        <button type="button" class="btn btn-icon !size-7 !w-7" title="Edit visit" @click="$store.drawer.open('visit-edit', {{ json_encode($editPayload($v)) }})"><x-icon name="pencil" class="!size-3.5" /></button>
                         <x-action :url="route('rotation.depart', $v)" class="btn btn-secondary btn-xs">Departed</x-action>
                         <x-action :url="route('rotation.cancel', $v)" confirm="Cancel this visit?" class="btn btn-icon !size-7 !w-7" title="Cancel visit"><x-icon name="x" class="!size-3.5" /></x-action>
                     </div>
@@ -176,6 +189,36 @@
             <x-slot:footer>
                 <button type="button" class="btn btn-secondary" @click="$store.drawer.close()">Cancel</button>
                 <button form="visit-form" class="btn btn-primary"><x-icon name="check" /> Schedule</button>
+            </x-slot:footer>
+        </x-drawer>
+
+        <x-drawer name="visit-edit" title="Edit site visit" subtitle="Change who, where or the dates. Moving the departure to a later date makes it scheduled again.">
+            <form id="visit-edit-form" method="POST" :action="$store.drawer.payload.url" class="space-y-4" x-data="visitEdit({ countWeekends: {{ \App\Models\Setting::get('rotation.count_weekends', '1') === '1' ? 'true' : 'false' }} })">
+                @csrf @method('PUT')
+                <x-field label="Staff member" name="employee_id" :options="$employees->pluck('full_name', 'id')" x-model="v.employee_id" required />
+                <x-field label="Project" name="project_id" :options="$projects->pluck('name', 'id')" blank="Not linked to a project" x-model="v.project_id" />
+                <x-field label="Site name" name="site_name" x-model="v.site_name" placeholder="Defaults to the project name" />
+                <x-field label="Site address" name="site_address" x-model="v.site_address" />
+                <div class="grid grid-cols-2 gap-4">
+                    <div><label class="label">Departure <span class="text-red-fg">*</span></label><input type="date" name="departure_date" x-model="v.departure" class="input" required></div>
+                    <div><label class="label">Days on site <span class="text-red-fg">*</span></label><input type="number" name="planned_days" x-model="v.days" min="1" max="120" class="input" required></div>
+                </div>
+                <div class="rounded-lg border border-line px-3 py-2.5 text-[13px] flex items-center justify-between">
+                    <span class="text-muted">Expected return</span><span class="font-semibold" x-text="returnLabel"></span>
+                </div>
+                <div x-show="v.status !== 'scheduled'" class="rounded-lg border border-line p-3 space-y-2">
+                    <label class="flex items-center gap-2 text-[13.5px] font-medium cursor-pointer">
+                        <input type="checkbox" class="checkbox" x-model="ended" @change="if (ended && !v.returned_on) v.returned_on = today"> Visit ended / came back on
+                    </label>
+                    <input type="date" name="returned_on" x-model="v.returned_on" :disabled="!ended" :min="v.departure" :max="today" class="input" x-show="ended">
+                    <p class="hint" x-show="!ended">Tick this to end the visit early, or to correct the date someone came back.</p>
+                </div>
+                <x-field label="Purpose" name="purpose" x-model="v.purpose" />
+                <x-field label="Notes" name="notes" type="textarea" rows="2" x-model="v.notes" />
+            </form>
+            <x-slot:footer>
+                <button type="button" class="btn btn-secondary" @click="$store.drawer.close()">Cancel</button>
+                <button form="visit-edit-form" class="btn btn-primary"><x-icon name="check" /> Save changes</button>
             </x-slot:footer>
         </x-drawer>
     </x-slot:drawers>
