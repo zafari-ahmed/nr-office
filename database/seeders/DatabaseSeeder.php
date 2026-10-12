@@ -191,7 +191,7 @@ class DatabaseSeeder extends Seeder
                 Expense::create(['expense_head_id' => $heads['office-renovation'], 'expense_date' => $month->copy()->addDays(min(10, $today->day - 1)), 'amount' => rand(40, 180) * 1000, 'description' => Arr::random(['Conference room paint', 'New AC installation', 'Reception furniture', 'Washroom fixtures']), 'vendor' => 'Ali Brothers', 'payment_method' => 'cheque', 'status' => 'approved', 'approved_by' => $admin->id, 'created_by' => $admin->id]);
             }
         }
-        Expense::create(['expense_head_id' => $heads['daily-office-items'], 'project_id' => $projects[0]->id, 'expense_date' => $today, 'amount' => 6500, 'description' => 'Site samples transport', 'payment_method' => 'cash', 'status' => 'pending', 'created_by' => $manager->id]);
+        Expense::create(['expense_head_id' => $heads['project-expenses'], 'project_id' => $projects[0]->id, 'expense_date' => $today, 'amount' => 6500, 'description' => 'Site samples transport', 'payment_method' => 'cash', 'status' => 'pending', 'created_by' => $manager->id]);
         Expense::create(['expense_head_id' => $heads['office-renovation'], 'expense_date' => $today, 'amount' => 42000, 'description' => 'Office blinds', 'vendor' => 'Decor Point', 'payment_method' => 'cash', 'status' => 'pending', 'created_by' => $manager->id]);
 
         // Inventory

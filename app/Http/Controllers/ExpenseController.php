@@ -118,7 +118,10 @@ class ExpenseController extends Controller
         }
 
         // Salary is paid to an employee for a month: no vendor or project, and the description writes itself.
-        $isSalary = ExpenseHead::whereKey($request->expense_head_id)->value('slug') === 'salary';
+        $head = ExpenseHead::find($request->expense_head_id);
+        $isSalary = $head?->slug === 'salary';
+        // Only heads marked "links to project" (e.g. Project expenses) carry a project, and there it is required.
+        $linksProject = (bool) $head?->links_project;
 
         $data = $request->validate([
             'expense_head_id' => ['required', 'exists:expense_heads,id'],
@@ -128,12 +131,16 @@ class ExpenseController extends Controller
             'vendor' => ['nullable', 'string', 'max:255'],
             'payment_method' => ['required', Rule::in(array_keys(Expense::METHODS))],
             'reference_no' => ['nullable', 'string', 'max:100'],
-            'project_id' => ['nullable', 'exists:projects,id'],
+            'project_id' => [$linksProject ? 'required' : 'nullable', 'exists:projects,id'],
             'employee_id' => [$isSalary ? 'required' : 'nullable', 'exists:employees,id'],
             'payroll_month' => [$isSalary ? 'required' : 'nullable', 'date'],
             'receipts' => ['nullable', 'array'],
             'receipts.*' => ['file', 'max:10240'],
-        ], ['employee_id.required' => 'Choose whose salary this is.', 'payroll_month.required' => 'Choose the salary month.']);
+        ], ['employee_id.required' => 'Choose whose salary this is.', 'payroll_month.required' => 'Choose the salary month.', 'project_id.required' => 'Choose the project this expense is for.']);
+
+        if (! $linksProject) {
+            $data['project_id'] = null;
+        }
 
         if ($isSalary) {
             $month = Carbon::parse($data['payroll_month']);

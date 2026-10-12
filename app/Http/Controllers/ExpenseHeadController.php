@@ -31,6 +31,7 @@ class ExpenseHeadController extends Controller
             'monthly_budget' => ['nullable', 'numeric', 'min:0'],
         ]);
         $data['monthly_budget'] ??= 0;
+        $data['links_project'] = $request->boolean('links_project');
 
         return $data;
     }

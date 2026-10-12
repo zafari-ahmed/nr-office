@@ -207,10 +207,26 @@ class WorkflowTest extends TestCase
         $this->assertNull($expense->vendor);
 
         // Other heads never keep an employee or month.
-        $office = ExpenseHead::where('slug', '!=', 'salary')->first();
-        $this->post('/expenses', ['expense_head_id' => $office->id, 'expense_date' => today()->toDateString(), 'amount' => 500, 'description' => 'Tea', 'payment_method' => 'cash', 'employee_id' => $emp->id, 'payroll_month' => '2026-09'])
+        $office = ExpenseHead::where('slug', '!=', 'salary')->where('links_project', false)->first();
+        $project = $this->project();
+        $this->post('/expenses', ['expense_head_id' => $office->id, 'expense_date' => today()->toDateString(), 'amount' => 500, 'description' => 'Tea', 'payment_method' => 'cash', 'employee_id' => $emp->id, 'payroll_month' => '2026-09', 'project_id' => $project->id])
             ->assertSessionHasNoErrors();
-        $this->assertNull($office->expenses()->first()->employee_id);
+        $tea = $office->expenses()->latest('id')->first();
+        $this->assertNull($tea->employee_id);
+        $this->assertNull($tea->project_id, 'Only project heads keep a project link.');
+    }
+
+    public function test_project_expense_head_requires_a_project(): void
+    {
+        $head = ExpenseHead::where('slug', 'project-expenses')->firstOrFail();
+        $this->assertTrue($head->links_project);
+        $base = ['expense_head_id' => $head->id, 'expense_date' => today()->toDateString(), 'amount' => 900, 'description' => 'Site samples', 'payment_method' => 'cash'];
+
+        $this->post('/expenses', $base)->assertSessionHasErrors('project_id');
+
+        $project = $this->project();
+        $this->post('/expenses', [...$base, 'project_id' => $project->id])->assertSessionHasNoErrors();
+        $this->assertSame($project->id, $head->expenses()->latest('id')->first()->project_id);
     }
 
     public function test_inventory_stock_movements(): void

@@ -8,7 +8,7 @@ use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Cache;
 
 /**
- * Default settings and the three standard expense heads. Safe to run on production.
+ * Default settings and the four standard expense heads. Safe to run on production.
  */
 class SettingsSeeder extends Seeder
 {
@@ -23,8 +23,9 @@ class SettingsSeeder extends Seeder
             ['Salary', 'salary', 'teal', 'users', 900000],
             ['Daily office items', 'daily-office-items', 'amber', 'coffee', 60000],
             ['Office renovation', 'office-renovation', 'grey', 'hammer', 150000],
+            ['Project expenses', 'project-expenses', 'blue', 'folder-kanban', 0],
         ] as $i => [$name, $slug, $color, $icon, $budget]) {
-            ExpenseHead::firstOrCreate(['slug' => $slug], ['name' => $name, 'color' => $color, 'icon' => $icon, 'monthly_budget' => $budget, 'sort_order' => $i]);
+            ExpenseHead::firstOrCreate(['slug' => $slug], ['name' => $name, 'color' => $color, 'icon' => $icon, 'monthly_budget' => $budget, 'sort_order' => $i, 'links_project' => $slug === 'project-expenses']);
         }
     }
 }

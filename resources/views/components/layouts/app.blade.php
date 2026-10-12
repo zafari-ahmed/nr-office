@@ -230,7 +230,7 @@
     </x-drawer>
 
     {{-- Global drawers used by the "+ New" menu --}}
-    @include('partials.drawers.expense', ['projects' => $quickProjects, 'heads' => $quickHeads, 'employees' => $quickEmployees])
+    @include('partials.drawers.expense', ['projects' => $quickProjects, 'heads' => $quickHeads, 'employees' => $quickEmployees, 'project' => request()->routeIs('projects.show') ? request()->route('project') : null])
     @include('partials.drawers.follow-up', ['projects' => $quickProjects, 'users' => $quickUsers, 'project' => null])
     @can('quotations.manage')
         @include('partials.drawers.log-document', ['projects' => $quickProjects, 'project' => null])

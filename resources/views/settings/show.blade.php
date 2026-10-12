@@ -6,16 +6,17 @@
             @if ($section === 'expense-heads')
                 <div class="card overflow-x-auto mb-6">
                     <table class="table">
-                        <thead><tr><th>Head</th><th>Colour</th><th>Monthly budget (PKR)</th><th>Active</th><th></th></tr></thead>
+                        <thead><tr><th colspan="6" class="!py-0"><div class="grid grid-cols-[1fr_130px_180px_110px_60px_80px] items-center gap-3 py-2.5"><span>Head</span><span>Colour</span><span>Monthly budget (PKR)</span><span title="Show the project field when adding an expense under this head">Links to project</span><span>Active</span><span></span></div></th></tr></thead>
                         <tbody>
                         @foreach ($heads as $head)
                             <tr>
-                                <td colspan="5" class="!p-0">
-                                    <form method="POST" action="{{ route('settings.expense-heads.update', $head) }}" class="grid grid-cols-[1fr_130px_180px_60px_80px] items-center gap-3 px-4 py-2">
+                                <td colspan="6" class="!p-0">
+                                    <form method="POST" action="{{ route('settings.expense-heads.update', $head) }}" class="grid grid-cols-[1fr_130px_180px_110px_60px_80px] items-center gap-3 px-4 py-2">
                                         @csrf @method('PUT')
                                         <input name="name" value="{{ $head->name }}" class="input !h-9">
                                         <select name="color" class="input !h-9">@foreach (['teal', 'blue', 'amber', 'grey', 'pink'] as $c)<option @selected($head->color === $c)>{{ $c }}</option>@endforeach</select>
                                         <input name="monthly_budget" type="number" step="1" min="0" value="{{ (float) $head->monthly_budget }}" class="input !h-9">
+                                        <input type="checkbox" name="links_project" value="1" class="checkbox" @checked($head->links_project) aria-label="Links to project">
                                         <input type="checkbox" name="is_active" value="1" class="checkbox" @checked($head->is_active)>
                                         <button class="btn btn-secondary btn-sm">Save</button>
                                     </form>
@@ -25,11 +26,12 @@
                         </tbody>
                     </table>
                 </div>
-                <form method="POST" action="{{ route('settings.expense-heads.store') }}" class="card card-pad grid sm:grid-cols-[1fr_140px_180px_auto] items-end gap-3">
+                <form method="POST" action="{{ route('settings.expense-heads.store') }}" class="card card-pad grid sm:grid-cols-[1fr_140px_180px_auto_auto] items-end gap-3">
                     @csrf
                     <x-field label="New head" name="name" required placeholder="Utilities" />
                     <x-field label="Colour" name="color" :options="array_combine($c = ['teal', 'blue', 'amber', 'grey', 'pink'], $c)" value="blue" />
                     <x-field label="Monthly budget" name="monthly_budget" type="number" min="0" />
+                    <label class="flex h-10 items-center gap-2 text-[13.5px] text-ink-2"><input type="checkbox" name="links_project" value="1" class="checkbox"> Links to project</label>
                     <button class="btn btn-primary"><x-icon name="plus" /> Add</button>
                 </form>
             @elseif ($section === 'rotation')

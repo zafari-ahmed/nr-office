@@ -1,15 +1,18 @@
 {{-- Add expense drawer. Expects $projects, $heads, $employees; optional $project to preselect.
-     Picking the Salary head swaps the form to: employee, month and amount (filled from their salary). --}}
+     Picking the Salary head swaps the form to: employee, month and amount (filled from their salary).
+     The project link only shows for heads marked "links to project" (e.g. Project expenses), where it is required. --}}
 @php
     $salaryHeads = $heads->where('slug', 'salary')->pluck('id')->map(fn ($id) => (string) $id)->values();
+    $projectHeads = $heads->where('links_project', true)->pluck('id')->map(fn ($id) => (string) $id)->values();
     $salaries = $employees->filter(fn ($e) => $e->basic_salary !== null)->mapWithKeys(fn ($e) => [$e->id => (float) $e->basic_salary]);
 @endphp
-<x-drawer name="expense" title="Add expense" subtitle="Receipts and project link are optional">
+<x-drawer name="expense" title="Add expense" subtitle="Receipts are optional">
     <form id="expense-form" method="POST" action="{{ route('expenses.store') }}" enctype="multipart/form-data" class="space-y-4"
-          x-data="{ head: '{{ old('expense_head_id') }}', employee: '{{ old('employee_id') }}', amount: '{{ old('amount') }}',
+          x-data="{ head: '{{ old('expense_head_id', isset($project) && $project ? $projectHeads->first() : '') }}', employee: '{{ old('employee_id') }}', amount: '{{ old('amount') }}',
                     month: '{{ old('payroll_month') ? substr(old('payroll_month'), 0, 7) : now()->format('Y-m') }}',
-                    salaryHeads: @js($salaryHeads), salaries: @js($salaries),
+                    salaryHeads: @js($salaryHeads), projectHeads: @js($projectHeads), salaries: @js($salaries),
                     get isSalary() { return this.salaryHeads.includes(String(this.head)) },
+                    get isProject() { return this.projectHeads.includes(String(this.head)) },
                     pickEmployee() { if (this.salaries[this.employee] !== undefined) this.amount = this.salaries[this.employee] } }">
         @csrf
         <input type="hidden" name="_drawer" value="expense">
@@ -19,7 +22,7 @@
         <template x-if="isSalary">
             <div class="grid grid-cols-2 gap-4">
                 <x-field label="Employee" name="employee_id" :options="$employees->pluck('full_name', 'id')" blank="Choose employee…" required class="col-span-2" x-model="employee" x-on:change="pickEmployee()" />
-                <x-field label="Salary month" name="payroll_month" type="month" required x-model="month" />
+                <x-month-picker label="Salary month" name="payroll_month" required x-model="month" />
                 <div>
                     <label class="label" for="f-amount-salary">Amount (PKR)<span class="text-red-fg"> *</span></label>
                     <input id="f-amount-salary" type="number" name="amount" step="0.01" min="1" required class="input" x-model="amount">
@@ -38,7 +41,9 @@
                 </div>
                 <x-field label="Description" name="description" required placeholder="e.g. Tea, sugar and cleaning supplies" />
                 <x-field label="Vendor / paid to" name="vendor" />
-                <x-field label="Link to project" name="project_id" :options="$projects->mapWithKeys(fn ($p) => [$p->id => $p->name.' · '.$p->code])" blank="No project (office expense)" :value="isset($project) ? $project?->id : null" />
+                <template x-if="isProject">
+                    <x-field label="Project" name="project_id" :options="$projects->mapWithKeys(fn ($p) => [$p->id => $p->name.' · '.$p->code])" blank="Choose project…" required :value="isset($project) ? $project?->id : null" />
+                </template>
             </div>
         </template>
 
