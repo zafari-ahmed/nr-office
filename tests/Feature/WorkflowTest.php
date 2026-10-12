@@ -196,9 +196,21 @@ class WorkflowTest extends TestCase
     {
         $emp = Employee::create(['employee_code' => 'EMP-001', 'full_name' => 'Ahmed', 'employment_type' => 'permanent', 'status' => 'active']);
         $head = ExpenseHead::where('slug', 'salary')->first();
-        $this->post('/expenses', ['expense_head_id' => $head->id, 'expense_date' => today()->toDateString(), 'amount' => 95000, 'description' => 'Salary', 'payment_method' => 'bank_transfer', 'employee_id' => $emp->id, 'payroll_month' => '2026-09'])
+        // Salary needs an employee and a month; vendor and project are dropped and the description is written for you.
+        $this->post('/expenses', ['expense_head_id' => $head->id, 'expense_date' => today()->toDateString(), 'amount' => 95000, 'payment_method' => 'bank_transfer'])
+            ->assertSessionHasErrors(['employee_id', 'payroll_month']);
+        $this->post('/expenses', ['expense_head_id' => $head->id, 'expense_date' => today()->toDateString(), 'amount' => 95000, 'payment_method' => 'bank_transfer', 'employee_id' => $emp->id, 'payroll_month' => '2026-09', 'vendor' => 'X'])
             ->assertSessionHasNoErrors();
-        $this->assertSame('2026-09-01', $head->expenses()->first()->payroll_month->toDateString());
+        $expense = $head->expenses()->first();
+        $this->assertSame('2026-09-01', $expense->payroll_month->toDateString());
+        $this->assertSame('Salary Sep 2026 – Ahmed', $expense->description);
+        $this->assertNull($expense->vendor);
+
+        // Other heads never keep an employee or month.
+        $office = ExpenseHead::where('slug', '!=', 'salary')->first();
+        $this->post('/expenses', ['expense_head_id' => $office->id, 'expense_date' => today()->toDateString(), 'amount' => 500, 'description' => 'Tea', 'payment_method' => 'cash', 'employee_id' => $emp->id, 'payroll_month' => '2026-09'])
+            ->assertSessionHasNoErrors();
+        $this->assertNull($office->expenses()->first()->employee_id);
     }
 
     public function test_inventory_stock_movements(): void

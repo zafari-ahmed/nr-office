@@ -45,9 +45,11 @@ class AppServiceProvider extends ServiceProvider
                 'shellOverdueVisits' => $user->hasPermission('rotation.view') ? SiteVisit::onSite()->whereDate('expected_return_date', '<', today())->count() : 0,
                 'shellPendingExpenses' => $user->hasPermission('expenses.approve') ? Expense::where('status', 'pending')->count() : 0,
                 'quickProjects' => Project::visibleTo($user)->whereNotIn('status', ['completed', 'cancelled'])->orderBy('name')->get(['id', 'name', 'code']),
-                'quickHeads' => ExpenseHead::where('is_active', true)->orderBy('sort_order')->get(['id', 'name']),
+                'quickHeads' => ExpenseHead::where('is_active', true)->orderBy('sort_order')->get(['id', 'name', 'slug']),
                 'quickEmployees' => Employee::active()->when(! $user->hasPermission('employees.view'), fn ($q) => $q->whereKey($user->employee_id))
-                    ->orderBy('full_name')->get(['id', 'full_name']),
+                    ->orderBy('full_name')->get(['id', 'full_name', 'basic_salary'])
+                    // Salaries only reach the page for people allowed to see them (used to fill the amount).
+                    ->each(fn ($e) => $user->hasPermission('employees.salary') || $e->id === $user->employee_id ?: $e->setAttribute('basic_salary', null)),
                 'quickUsers' => User::where('is_active', true)->orderBy('name')->get(['id', 'name']),
             ]);
         });

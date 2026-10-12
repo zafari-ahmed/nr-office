@@ -117,19 +117,34 @@ class ExpenseController extends Controller
             $request->merge(['payroll_month' => $request->payroll_month.'-01']);
         }
 
-        return $request->validate([
+        // Salary is paid to an employee for a month: no vendor or project, and the description writes itself.
+        $isSalary = ExpenseHead::whereKey($request->expense_head_id)->value('slug') === 'salary';
+
+        $data = $request->validate([
             'expense_head_id' => ['required', 'exists:expense_heads,id'],
             'expense_date' => ['required', 'date'],
             'amount' => ['required', 'numeric', 'min:1'],
-            'description' => ['required', 'string', 'max:255'],
+            'description' => [$isSalary ? 'nullable' : 'required', 'string', 'max:255'],
             'vendor' => ['nullable', 'string', 'max:255'],
             'payment_method' => ['required', Rule::in(array_keys(Expense::METHODS))],
             'reference_no' => ['nullable', 'string', 'max:100'],
             'project_id' => ['nullable', 'exists:projects,id'],
-            'employee_id' => ['nullable', 'exists:employees,id'],
-            'payroll_month' => ['nullable', 'date'],
+            'employee_id' => [$isSalary ? 'required' : 'nullable', 'exists:employees,id'],
+            'payroll_month' => [$isSalary ? 'required' : 'nullable', 'date'],
             'receipts' => ['nullable', 'array'],
             'receipts.*' => ['file', 'max:10240'],
-        ]);
+        ], ['employee_id.required' => 'Choose whose salary this is.', 'payroll_month.required' => 'Choose the salary month.']);
+
+        if ($isSalary) {
+            $month = Carbon::parse($data['payroll_month']);
+            $data['description'] = 'Salary '.$month->format('M Y').' – '.Employee::find($data['employee_id'])->full_name;
+            $data['vendor'] = null;
+            $data['project_id'] = null;
+        } else {
+            $data['employee_id'] = null;
+            $data['payroll_month'] = null;
+        }
+
+        return $data;
     }
 }

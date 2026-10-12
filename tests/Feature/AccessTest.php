@@ -59,7 +59,7 @@ class AccessTest extends TestCase
     {
         $others = Expense::where('created_by', '!=', $this->staff->id)->where(fn ($q) => $q->whereNull('employee_id')->orWhere('employee_id', '!=', $this->staff->employee_id))->first();
         $this->actingAs($this->staff);
-        $this->post('/expenses', ['expense_head_id' => $others->expense_head_id, 'expense_date' => today()->toDateString(), 'amount' => 1234, 'description' => 'Taxi to site', 'payment_method' => 'cash'])->assertSessionHasNoErrors();
+        $this->post('/expenses', ['expense_head_id' => \App\Models\ExpenseHead::where('slug', '!=', 'salary')->value('id'), 'expense_date' => today()->toDateString(), 'amount' => 1234, 'description' => 'Taxi to site', 'payment_method' => 'cash'])->assertSessionHasNoErrors();
         $mine = Expense::where('description', 'Taxi to site')->first();
         $this->assertSame('pending', $mine->status);
 
