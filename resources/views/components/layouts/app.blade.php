@@ -1,6 +1,6 @@
 @php
     $user = auth()->user();
-    // [label, route, icon, active patterns, badge, badge tone, permission needed (null = everyone)]
+    // [label, route, icon, active patterns, badge, badge tone, permission needed (null = everyone)]; modules switched off in Settings › Modules are left out
     $nav = collect([
         ['Dashboard', 'dashboard', 'layout-dashboard', ['dashboard'], 0, '', null],
         ['Projects', 'projects.index', 'folder-kanban', ['projects.*', 'clients.*'], 0, '', null],
@@ -11,7 +11,7 @@
         ['Employees', 'employees.index', 'users', ['employees.*'], 0, '', 'employees.view'],
         ['Site Rotation', 'rotation.index', 'calendar-range', ['rotation.*'], $shellOverdueVisits ?? 0, 'red', 'rotation.view'],
         ['Reports', 'reports.index', 'bar-chart-3', ['reports.*'], 0, '', 'reports.view'],
-    ])->filter(fn ($item) => ! $item[6] || $user->hasPermission($item[6]))->values();
+    ])->filter(fn ($item) => \App\Support\Modules::enabled((string) \App\Support\Modules::forRoute($item[1])) && (! $item[6] || $user->hasPermission($item[6])))->values();
     $canSettings = collect(array_keys(\App\Http\Controllers\SettingsController::SECTIONS))->contains(fn ($s) => \App\Http\Controllers\SettingsController::allowed($user, $s));
     // "+ New" menu: [label, icon, link or drawer, permission]
     $newItems = collect([
@@ -21,7 +21,7 @@
         ['Expense', 'wallet', 'drawer:expense', null],
         ['Follow-up', 'phone-call', 'drawer:follow-up', null],
         ['Log sent document', 'mail', 'drawer:log-document', 'quotations.manage'],
-    ])->filter(fn ($item) => ! $item[3] || $user->hasPermission($item[3]))->values();
+    ])->filter(fn ($item) => \App\Support\Modules::enabled(match ($item[0]) { 'Expense' => 'expenses', 'Follow-up' => 'projects', default => '' }) && (! $item[3] || $user->hasPermission($item[3])))->values();
 @endphp
 <!DOCTYPE html>
 <html lang="en">
@@ -30,6 +30,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ isset($title) ? $title.' · ' : '' }}{{ \App\Models\Setting::get('company.name') }} Office</title>
+    @if (file_exists(public_path('images/favicon.png')))<link rel="icon" type="image/png" href="{{ asset('images/favicon.png') }}?v={{ filemtime(public_path('images/favicon.png')) }}">@endif
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">

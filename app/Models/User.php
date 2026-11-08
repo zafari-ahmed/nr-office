@@ -46,6 +46,11 @@ class User extends Authenticatable
 
     public function hasPermission(string $permission): bool
     {
+        $module = \App\Support\Modules::forRoute($permission);
+        if ($module && ! \App\Support\Modules::enabled($module)) {
+            return false;
+        }
+
         return $this->isAdmin() || in_array($permission, \App\Support\Access::forRole($this->role), true);
     }
 

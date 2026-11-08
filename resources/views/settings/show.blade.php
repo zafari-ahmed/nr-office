@@ -82,6 +82,8 @@
                 </form>
             @elseif ($section === 'notifications')
                 @include('settings._notifications')
+            @elseif ($section === 'modules')
+                @include('settings._modules')
             @else
                 <form method="POST" action="{{ route('settings.update', $section) }}" class="card overflow-hidden">
                     @csrf @method('PUT')

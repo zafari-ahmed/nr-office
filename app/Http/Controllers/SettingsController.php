@@ -13,6 +13,7 @@ class SettingsController extends Controller
         'company' => ['Company profile', 'building-2'],
         'users' => ['Users & roles', 'users'],
         'access' => ['Access rights', 'shield-check'],
+        'modules' => ['Modules', 'layout-dashboard'],
         'rotation' => ['Rotation rules', 'refresh-cw'],
         'notifications' => ['Notifications', 'bell'],
         'expense-heads' => ['Expense heads & budgets', 'wallet'],
@@ -21,6 +22,16 @@ class SettingsController extends Controller
     ];
 
     private const RULES = [
+        'modules' => [
+            'module.projects' => ['required', 'boolean'],
+            'module.quotations' => ['required', 'boolean'],
+            'module.invoices' => ['required', 'boolean'],
+            'module.expenses' => ['required', 'boolean'],
+            'module.inventory' => ['required', 'boolean'],
+            'module.employees' => ['required', 'boolean'],
+            'module.rotation' => ['required', 'boolean'],
+            'module.reports' => ['required', 'boolean'],
+        ],
         'company' => [
             'company.name' => ['required', 'string', 'max:255'],
             'company.tagline' => ['nullable', 'string', 'max:255'],
@@ -72,6 +83,10 @@ class SettingsController extends Controller
     /** The permission each section needs; everything else needs settings.manage. */
     public static function allowed(\App\Models\User $user, string $section): bool
     {
+        if ($section === 'modules') {
+            return $user->isAdmin();
+        }
+
         return $user->hasPermission(match ($section) { 'users' => 'users.manage', 'access' => 'access.manage', default => 'settings.manage' })
             || ($section === 'access' && $user->isAdmin());
     }
@@ -95,6 +110,7 @@ class SettingsController extends Controller
             return redirect(self::url($section));
         }
         abort_unless(array_key_exists($section, self::SECTIONS), 404);
+        abort_unless(self::allowed(request()->user(), $section), 403);
 
         return view('settings.show', [
             'section' => $section,
@@ -108,6 +124,7 @@ class SettingsController extends Controller
     public function update(Request $request, string $section)
     {
         abort_unless(isset(self::RULES[$section]), 404);
+        abort_unless(self::allowed($request->user(), $section), 403);
         // Fields are posted as company[name] etc., which match the dotted rule keys.
         $request->validate(self::RULES[$section]);
 
