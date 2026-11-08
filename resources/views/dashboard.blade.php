@@ -152,9 +152,13 @@
 
     @endcan
 
-    {{-- Recent activity --}}
-    <div class="card mt-5 overflow-hidden">
-        <div class="card-head"><h2 class="card-title">Recent activity</h2></div>
+    {{-- Recent activity (collapsed by default; the choice is remembered in this browser) --}}
+    <div class="card mt-5 overflow-hidden" x-data="{ open: localStorage.getItem('dashboard.activity') === 'open' }" x-init="$watch('open', v => localStorage.setItem('dashboard.activity', v ? 'open' : 'closed'))">
+        <button type="button" class="card-head w-full text-left cursor-pointer" :class="!open && '!border-b-0'" @click="open = !open" :aria-expanded="open">
+            <h2 class="card-title flex-1">Recent activity <span class="text-muted font-normal text-[13px]">({{ $activity->count() }})</span></h2>
+            <x-icon name="chevron-down" class="size-4 text-muted transition-transform" ::class="open && 'rotate-180'" />
+        </button>
+        <div x-show="open" x-cloak>
         @forelse ($activity as $a)
             <div class="flex items-center gap-3 px-[18px] py-2.5 border-b border-line-2 last:border-b-0">
                 <x-avatar :name="$a->user?->name ?? 'System'" size="size-7 text-[10.5px]" />
@@ -171,5 +175,6 @@
         @empty
             <x-empty icon="history" title="No activity yet" />
         @endforelse
+        </div>
     </div>
 </x-layouts.app>
