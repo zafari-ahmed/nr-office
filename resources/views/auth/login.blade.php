@@ -4,6 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Sign in · {{ \App\Models\Setting::get('company.name') }}</title>
+    @if (file_exists(public_path('images/favicon.png')))<link rel="icon" type="image/png" href="{{ asset('images/favicon.png') }}?v={{ filemtime(public_path('images/favicon.png')) }}">@endif
     <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
@@ -20,8 +21,11 @@
         <div class="text-sm opacity-70">{{ \App\Models\Setting::get('company.tagline') }}</div>
     </div>
     <div class="flex items-center justify-center p-6">
-        <form method="POST" action="{{ url('/login') }}" class="w-full max-w-sm space-y-5">
+        <form method="POST" action="{{ url('/login') }}" class="w-full max-w-sm space-y-5" style="margin-top: -25%;">
             @csrf
+            @if (file_exists(public_path('images/nr-logo.png')))
+                <img src="{{ asset('images/nr-logo.png') }}" alt="{{ \App\Models\Setting::get('company.name') }}" class="mx-auto h-20 w-auto" style="width: 40%;">
+            @endif
             <div>
                 <h2 class="text-2xl font-semibold">Welcome back</h2>
                 <p class="text-muted mt-1">Sign in to the office system.</p>
