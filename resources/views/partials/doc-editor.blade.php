@@ -132,10 +132,10 @@
                     <span>Live PDF preview</span>
                     <span class="inline-flex items-center gap-1"><x-icon name="download" class="size-3.5" /> A4</span>
                 </div>
-                <div class="bg-white text-[#14171a] shadow-pop border-b-4 border-[#0e6b69] aspect-[1/1.414] px-9 py-8 text-[10.5px] leading-snug flex flex-col">
+                <div class="bg-white text-[#14171a] shadow-pop border-b-4 border-[#0a2c5c] aspect-[1/1.414] px-9 py-8 text-[10.5px] leading-snug flex flex-col">
                     <div class="flex justify-between items-start gap-6 pb-4 border-b border-[#e4e7ea]">
                         <div class="flex gap-2.5">
-                            <span class="grid place-items-center size-8 rounded-md bg-[#0e6b69] text-white font-bold text-[10px] shrink-0">NR</span>
+                            <span class="grid place-items-center size-8 rounded-md bg-[#0a2c5c] text-white font-bold text-[10px] shrink-0">NR</span>
                             <div>
                                 <div class="text-[13px] font-semibold">{{ $s('company.name') }}</div>
                                 <div class="text-[#8a929b] max-w-60 mt-0.5">{{ $s('company.address') }}</div>
@@ -143,7 +143,7 @@
                             </div>
                         </div>
                         <div class="text-right shrink-0">
-                            <div class="text-[14px] font-bold text-[#0e6b69] tracking-[.06em] uppercase">{{ $kind }}</div>
+                            <div class="text-[14px] font-bold text-[#0a2c5c] tracking-[.06em] uppercase">{{ $kind }}</div>
                             <div class="font-mono text-[#566069] mt-0.5">{{ $number }}@if ($isQuote) · Rev {{ $doc->revision }}@endif</div>
                             <div class="text-[#8a929b]" x-text="d(issue) + (until ? ' · {{ $isQuote ? 'valid until' : 'due' }} ' + d(until) : '')"></div>
                         </div>

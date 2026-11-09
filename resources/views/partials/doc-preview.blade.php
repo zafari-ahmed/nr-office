@@ -1,13 +1,13 @@
 {{-- Read-only branded document (used on show pages and print). --}}
 @php $isQuote = $kind === 'Quotation'; @endphp
 <div class="bg-white text-gray-900 rounded-card shadow-card border border-line p-6 sm:p-10 text-[13px] leading-relaxed print:shadow-none print:border-0 print:p-0">
-    <div class="flex flex-col sm:flex-row justify-between items-start gap-4 border-b-2 border-teal-700 pb-5">
+    <div class="flex flex-col sm:flex-row justify-between items-start gap-4 border-b-2 border-[#0a2c5c] pb-5">
         <div>
-            <div class="flex items-center gap-2.5"><span class="grid place-items-center size-10 rounded-lg bg-teal-700 text-white font-bold text-sm">NR</span><span class="text-lg font-semibold">{{ \App\Models\Setting::get('company.name') }}</span></div>
+            <div class="flex items-center gap-2.5"><span class="grid place-items-center size-10 rounded-lg bg-[#0a2c5c] text-white font-bold text-sm">NR</span><span class="text-lg font-semibold">{{ \App\Models\Setting::get('company.name') }}</span></div>
             <div class="text-gray-500 mt-1.5 max-w-xs">{{ \App\Models\Setting::get('company.address') }}<br>{{ \App\Models\Setting::get('company.phone') }} · {{ \App\Models\Setting::get('company.email') }}@if (\App\Models\Setting::get('company.ntn'))<br>NTN {{ \App\Models\Setting::get('company.ntn') }}@endif</div>
         </div>
         <div class="sm:text-right">
-            <div class="text-2xl font-semibold text-teal-700 uppercase tracking-wide">{{ $kind }}</div>
+            <div class="text-2xl font-semibold text-[#0a2c5c] uppercase tracking-wide">{{ $kind }}</div>
             <div class="text-gray-600 font-medium">{{ $isQuote ? $doc->quotation_number.' · Rev '.$doc->revision : $doc->invoice_number }}</div>
             <div class="text-gray-500">Date: {{ $doc->issue_date->format('d M Y') }}</div>
             @if ($isQuote && $doc->valid_until)<div class="text-gray-500">Valid until: {{ $doc->valid_until->format('d M Y') }}</div>@endif
@@ -49,7 +49,7 @@
             <div class="flex justify-between"><dt class="text-gray-500">Subtotal</dt><dd>{{ money($doc->subtotal) }}</dd></div>
             @if ($doc->discount_amount > 0)<div class="flex justify-between"><dt class="text-gray-500">Discount{{ $doc->discount_type === 'percent' ? ' ('.(float) $doc->discount_value.'%)' : '' }}</dt><dd>− {{ money($doc->discount_amount) }}</dd></div>@endif
             @if ($doc->tax_amount > 0)<div class="flex justify-between"><dt class="text-gray-500">{{ \App\Models\Setting::get('finance.tax_label') }} ({{ (float) $doc->tax_rate }}%)</dt><dd>{{ money($doc->tax_amount) }}</dd></div>@endif
-            <div class="flex justify-between border-t-2 border-teal-700 pt-2 font-semibold text-[15px]"><dt>Total</dt><dd>{{ money($doc->total) }}</dd></div>
+            <div class="flex justify-between border-t-2 border-[#0a2c5c] pt-2 font-semibold text-[15px]"><dt>Total</dt><dd>{{ money($doc->total) }}</dd></div>
             @if (! $isQuote && $doc->amount_paid > 0)
                 <div class="flex justify-between text-emerald-700"><dt>Paid</dt><dd>− {{ money($doc->amount_paid) }}</dd></div>
                 <div class="flex justify-between font-semibold"><dt>Balance due</dt><dd>{{ money($doc->balance_due) }}</dd></div>

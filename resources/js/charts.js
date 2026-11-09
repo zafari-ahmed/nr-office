@@ -7,8 +7,8 @@ Chart.register(BarController, BarElement, LineController, LineElement, PointElem
 
 // Chart colours from the design system (c1 to c5); older head colour names map onto them.
 const PALETTE = {
-    teal: '#0e6b69', blue: '#5b8fd6', amber: '#e0a33a', grey: '#9aa3ad', pink: '#c97b9b',
-    indigo: '#5b8fd6', sky: '#5b8fd6', slate: '#9aa3ad', rose: '#c97b9b', violet: '#c97b9b', emerald: '#0e6b69',
+    teal: '#0a2c5c', blue: '#5b8fd6', amber: '#e0a33a', grey: '#9aa3ad', pink: '#c97b9b',
+    indigo: '#5b8fd6', sky: '#5b8fd6', slate: '#9aa3ad', rose: '#c97b9b', violet: '#c97b9b', emerald: '#0a2c5c',
 };
 export const color = (name) => PALETTE[name] || name || PALETTE.slate;
 

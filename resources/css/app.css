@@ -13,7 +13,7 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 /*
- * NR Associates design tokens. Surfaces and text flip in dark mode; the accent is deep teal.
+ * NR Associates design tokens. Surfaces and text flip in dark mode; the accent is the NR website navy (#0a2c5c).
  */
 :root {
     --bg: #f5f6f7;
@@ -26,12 +26,12 @@
     --text: #14171a;
     --text-2: #566069;
     --muted: #8a929b;
-    --accent: #0e6b69;
-    --accent-hover: #0b5856;
-    --accent-soft: #e2f0ef;
-    --accent-ink: #0b5c5a;
+    --accent: #0a2c5c;
+    --accent-hover: #12396f;
+    --accent-soft: #e6edf6;
+    --accent-ink: #0a2c5c;
     --on-accent: #ffffff;
-    --ring: rgba(14, 107, 105, 0.18);
+    --ring: rgba(10, 44, 92, 0.18);
     --grey-bg: #eef0f2; --grey-fg: #58616b;
     --blue-bg: #e6effc; --blue-fg: #1f5cb8;
     --amber-bg: #fcf1d9; --amber-fg: #925c00;
@@ -52,12 +52,12 @@
     --text: #eceef0;
     --text-2: #a2aab3;
     --muted: #6f7881;
-    --accent: #3bb3a8;
-    --accent-hover: #52c4b9;
-    --accent-soft: #14302e;
-    --accent-ink: #6fd1c6;
-    --on-accent: #06201e;
-    --ring: rgba(59, 179, 168, 0.25);
+    --accent: #6d9ce0;
+    --accent-hover: #86b0ea;
+    --accent-soft: #14233a;
+    --accent-ink: #9cc0f2;
+    --on-accent: #061a36;
+    --ring: rgba(109, 156, 224, 0.25);
     --grey-bg: #23272b; --grey-fg: #a2aab3;
     --blue-bg: #152540; --blue-fg: #86b4f5;
     --amber-bg: #33270f; --amber-fg: #efb54d;
