@@ -5,7 +5,14 @@
         @csrf
         @if ($project->exists) @method('PUT') @endif
         <div class="lg:col-span-2 card card-pad space-y-5">
-            <x-field label="Project name" name="name" :value="$project->name" required placeholder="Gulberg Residence Renovation" />
+            @if (auth()->user()->isAdmin())
+                <div class="grid sm:grid-cols-[180px_minmax(0,1fr)] gap-4">
+                    <x-field label="Project code" name="code" :value="$project->code" maxlength="30" hint="Only admins can change this. Leave blank for the next number." />
+                    <x-field label="Project name" name="name" :value="$project->name" required placeholder="Gulberg Residence Renovation" />
+                </div>
+            @else
+                <x-field label="Project name" name="name" :value="$project->name" required placeholder="Gulberg Residence Renovation" />
+            @endif
             <div>
                 <div class="flex items-center justify-between">
                     <label class="label">Client</label>

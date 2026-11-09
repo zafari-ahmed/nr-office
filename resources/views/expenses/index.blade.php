@@ -89,7 +89,9 @@
                             @if ($e->status === 'pending' && auth()->user()->hasPermission('expenses.approve'))
                                 <x-action :url="route('expenses.approve', $e)" class="btn btn-secondary btn-sm text-green-fg"><x-icon name="check" /> Approve</x-action>
                                 <x-action :url="route('expenses.reject', $e)" class="btn btn-secondary btn-sm !w-[30px] !px-0 text-red-fg" title="Reject"><x-icon name="x" /></x-action>
-                            @elseif (auth()->user()->hasPermission('expenses.approve') || (auth()->user()->ownsExpense($e) && $e->status === 'pending'))
+                            @endif
+                            @if (auth()->user()->hasPermission('expenses.approve') || (auth()->user()->ownsExpense($e) && $e->status === 'pending'))
+                                <button type="button" class="btn btn-icon !size-7 !w-7 hover:text-accent" title="Edit" @click="$store.drawer.open('expense', @js($e->editPayload()))"><x-icon name="pencil" class="!size-3.5" /></button>
                                 <x-action :url="route('expenses.destroy', $e)" method="DELETE" confirm="Delete this expense?" class="btn btn-icon !size-7 !w-7 hover:text-red-fg" title="Delete"><x-icon name="trash-2" class="!size-3.5" /></x-action>
                             @endif
                         </td>

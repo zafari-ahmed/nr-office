@@ -165,8 +165,9 @@
     .table tbody tr:last-child td { @apply border-b-0; }
 
     /* Tabs */
-    .tabs { @apply flex gap-0.5 border-b border-line overflow-x-auto; }
-    .tab { @apply h-[38px] inline-flex items-center gap-1.5 px-3 text-[13.5px] font-medium text-ink-2 border-b-2 border-transparent -mb-px whitespace-nowrap no-underline hover:text-ink hover:no-underline; }
+    /* The divider is an inset shadow (not a border) so the active tab's underline can sit on it without overflowing, which used to show a scrollbar. */
+    .tabs { @apply flex gap-0.5 overflow-x-auto overflow-y-hidden; box-shadow: inset 0 -1px 0 var(--color-line); scrollbar-width: none; }
+    .tab { @apply h-[38px] inline-flex items-center gap-1.5 px-3 text-[13.5px] font-medium text-ink-2 border-b-2 border-transparent whitespace-nowrap no-underline hover:text-ink hover:no-underline; }
     .tab-active { @apply text-ink border-accent; }
 
     /* Segmented control */
@@ -227,4 +228,31 @@
 @media print {
     .no-print { display: none !important; }
     body { background: white; }
+}
+
+/* Rich text: the notes editor and saved notes. Tailwind's reset strips list bullets and heading sizes, so they are restored here. */
+@layer components {
+    .rich { @apply text-[13.5px] leading-relaxed text-ink break-words; }
+    .rich > * + * { @apply mt-2; }
+    .rich h1 { @apply text-[18px] font-semibold; }
+    .rich h2 { @apply text-[16px] font-semibold; }
+    .rich h3 { @apply text-[14.5px] font-semibold; }
+    .rich ul { @apply list-disc pl-5; }
+    .rich ol { @apply list-decimal pl-5; }
+    .rich li > p { @apply m-0; }
+    .rich li + li { @apply mt-0.5; }
+    .rich blockquote { @apply border-l-[3px] border-line pl-3 text-ink-2; }
+    .rich a { @apply text-accent underline; }
+    .rich code { @apply font-mono text-[12.5px] bg-surface-2 rounded px-1; }
+    .rich pre { @apply font-mono text-[12.5px] bg-surface-2 rounded-lg p-3 overflow-x-auto; }
+    .rich hr { @apply border-line; }
+    .rich table { @apply w-full border-collapse text-[13px]; }
+    .rich th, .rich td { @apply border border-line px-2 py-1 align-top text-left; }
+    .rich th { @apply bg-surface-2 font-medium; }
+    .rich-editor { @apply rounded-lg border border-line bg-surface transition focus-within:border-accent focus-within:ring-[3px] focus-within:ring-[var(--ring)]; }
+    .rich-toolbar { @apply flex flex-wrap items-center gap-0.5 px-1.5 py-1 border-b border-line; }
+    .rich-btn { @apply grid place-items-center size-7 rounded-md text-ink-2 hover:bg-surface-2 hover:text-ink; }
+    .rich-btn.is-active { @apply bg-surface-2 text-accent; }
+    .rich-editor-content { @apply min-h-[120px] max-h-[420px] overflow-y-auto px-3 py-2.5 outline-none; }
+    .rich-editor-content p.is-editor-empty:first-child::before { content: attr(data-placeholder); @apply float-left h-0 text-muted pointer-events-none; }
 }

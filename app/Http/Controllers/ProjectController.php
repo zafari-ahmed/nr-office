@@ -45,7 +45,8 @@ class ProjectController extends Controller
         $data['client_id'] = $this->resolveClient($request, $data['client_id'] ?? null);
         unset($data['new_client_name'], $data['new_client_phone'], $data['team']);
         $data['project_value'] ??= 0;
-        $data['code'] = Numbering::project();
+        // Only the admin may choose the code; everyone else gets the next number.
+        $data['code'] = $request->user()->isAdmin() && ! empty($data['code']) ? $data['code'] : Numbering::project();
         $project = Project::create($data);
         $this->syncTeam($request, $project);
         Activity::log('created', "Project {$project->name} created", $project, $project->id);
@@ -93,6 +94,9 @@ class ProjectController extends Controller
         $data['client_id'] = $this->resolveClient($request, $data['client_id'] ?? null);
         unset($data['new_client_name'], $data['new_client_phone'], $data['team']);
         $data['project_value'] ??= 0;
+        if (! $request->user()->isAdmin() || empty($data['code'])) {
+            unset($data['code']);
+        }
         $oldStatus = $project->status;
         $project->update($data);
         $this->syncTeam($request, $project);
@@ -146,6 +150,9 @@ class ProjectController extends Controller
     private function validated(Request $request, ?Project $project = null): array
     {
         return $request->validate([
+            'code' => $request->user()->isAdmin()
+                ? ['nullable', 'string', 'max:30', Rule::unique('projects', 'code')->ignore($project?->id)]
+                : ['exclude'],
             'name' => ['required', 'string', 'max:255'],
             'client_id' => ['nullable', 'exists:clients,id'],
             'new_client_name' => ['nullable', 'string', 'max:255'],
@@ -160,6 +167,8 @@ class ProjectController extends Controller
             'description' => ['nullable', 'string', 'max:5000'],
             'team' => ['nullable', 'array'],
             'team.*' => ['integer', 'exists:employees,id'],
+        ], [
+            'code.unique' => 'Another project already uses this code. Choose a different one.',
         ]);
     }
 

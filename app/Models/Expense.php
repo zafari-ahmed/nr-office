@@ -63,4 +63,18 @@ class Expense extends Model
         return $query->where(fn ($q) => $q->where('created_by', $user->id)
             ->when($user->employee_id, fn ($q) => $q->orWhere('employee_id', $user->employee_id)));
     }
+
+    /** What the expense drawer needs to open this expense for editing. */
+    public function editPayload(): array
+    {
+        return [
+            'url' => route('expenses.update', $this),
+            'expense' => [
+                'expense_head_id' => $this->expense_head_id, 'employee_id' => $this->employee_id, 'amount' => (float) $this->amount,
+                'payroll_month' => $this->payroll_month?->format('Y-m'), 'description' => $this->description, 'vendor' => $this->vendor,
+                'project_id' => $this->project_id, 'expense_date' => $this->expense_date?->format('Y-m-d'),
+                'payment_method' => $this->payment_method, 'reference_no' => $this->reference_no,
+            ],
+        ];
+    }
 }

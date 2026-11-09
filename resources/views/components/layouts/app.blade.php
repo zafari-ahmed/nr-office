@@ -256,7 +256,7 @@
             @if (session('success')) Alpine.store('toasts').push(@js(session('success'))); @endif
             @if (session('error')) Alpine.store('toasts').push(@js(session('error')), 'error'); @endif
             @if ($errors->any()) Alpine.store('toasts').push(@js($errors->first()), 'error'); @endif
-            @if ($errors->any() && old('_drawer')) Alpine.store('drawer').open(@js(old('_drawer'))); @endif
+            @if ($errors->any() && old('_drawer')) Alpine.store('drawer').open(@js(old('_drawer')), @js(str_starts_with((string) old('_edit_url'), url('/expenses/')) ? ['url' => old('_edit_url')] : [])); @endif
         });
     </script>
 @endif

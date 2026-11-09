@@ -100,6 +100,7 @@
                                 @else
                                     <span class="text-xs text-muted">Done {{ $f->completed_at?->format('d M') }}</span>
                                 @endif
+                                <x-action :url="route('follow-ups.destroy', $f)" method="DELETE" confirm="Delete this follow-up?" class="btn btn-icon !size-7 !w-7 hover:text-red-fg" title="Delete"><x-icon name="trash-2" class="!size-3.5" /></x-action>
                             </div>
                         @empty
                             <x-empty icon="calendar-clock" title="No follow-ups yet"><button class="btn btn-primary" @click="$store.drawer.open('follow-up-{{ $project->id }}')">Add follow-up</button></x-empty>
@@ -150,12 +151,13 @@
                     <div class="flex justify-end mb-3"><button class="btn btn-primary btn-sm" @click="$store.drawer.open('expense')"><x-icon name="plus" /> Add expense</button></div>
                     <div class="card overflow-x-auto">
                         <table class="table">
-                            <thead><tr><th>Date</th><th>Head</th><th>Description</th><th>Status</th><th class="text-right">Amount</th></tr></thead>
+                            <thead><tr><th>Date</th><th>Head</th><th>Description</th><th>Status</th><th class="text-right">Amount</th><th class="w-10"></th></tr></thead>
                             <tbody>
                             @forelse ($projectExpenses as $e)
-                                <tr><td>{{ $e->expense_date->format('d M Y') }}</td><td>{{ $e->head->name }}</td><td>{{ $e->description }}</td><td><x-pill :status="$e->status" /></td><td class="text-right tabular-nums">{{ money($e->amount) }}</td></tr>
+                                <tr><td>{{ $e->expense_date->format('d M Y') }}</td><td>{{ $e->head->name }}</td><td>{{ $e->description }}</td><td><x-pill :status="$e->status" /></td><td class="text-right tabular-nums">{{ money($e->amount) }}</td>
+                                    <td class="text-right whitespace-nowrap">@if (auth()->user()->hasPermission('expenses.approve') || (auth()->user()->ownsExpense($e) && $e->status === 'pending'))<button type="button" class="btn btn-icon !size-7 !w-7 hover:text-accent" title="Edit" @click="$store.drawer.open('expense', @js($e->editPayload()))"><x-icon name="pencil" class="!size-3.5" /></button><x-action :url="route('expenses.destroy', $e)" method="DELETE" confirm="Delete this expense?" class="btn btn-icon !size-7 !w-7 hover:text-red-fg" title="Delete"><x-icon name="trash-2" class="!size-3.5" /></x-action>@endif</td></tr>
                             @empty
-                                <tr><td colspan="5"><x-empty icon="wallet" title="No expenses linked to this project" /></td></tr>
+                                <tr><td colspan="6"><x-empty icon="wallet" title="No expenses linked to this project" /></td></tr>
                             @endforelse
                             </tbody>
                         </table>
@@ -204,7 +206,31 @@
                     <div class="card card-pad mb-4">
                         <form method="POST" action="{{ route('notes.store', $project) }}" class="space-y-3">
                             @csrf
-                            <x-field name="body" type="textarea" rows="3" placeholder="Write a note for the team…" />
+                            @php
+                                $tools = [
+                                    ['bold', 'toggleBold', 'bold', 'Bold (Ctrl+B)'], ['italic', 'toggleItalic', 'italic', 'Italic (Ctrl+I)'],
+                                    ['underline', 'toggleUnderline', 'underline', 'Underline (Ctrl+U)'], ['strike', 'toggleStrike', 'strikethrough', 'Strikethrough'], null,
+                                    ['h2', 'toggleHeading', 'heading-2', 'Heading', ['level' => 2]], ['h3', 'toggleHeading', 'heading-3', 'Subheading', ['level' => 3]], null,
+                                    ['bullet', 'toggleBulletList', 'list', 'Bulleted list'], ['ordered', 'toggleOrderedList', 'list-ordered', 'Numbered list'], ['quote', 'toggleBlockquote', 'quote', 'Quote'],
+                                ];
+                            @endphp
+                            <div x-data="richEditor({ name: 'body', placeholder: 'Write a note for the team, or paste from a document…', value: @js(old('body', '')) })" class="rich-editor">
+                                <div class="rich-toolbar">
+                                    @foreach ($tools as $t)
+                                        @if ($t === null)
+                                            <span class="w-px h-5 bg-line mx-1"></span>
+                                        @else
+                                            <button type="button" class="rich-btn" :class="active.{{ $t[0] }} && 'is-active'" title="{{ $t[3] }}" @click="run('{{ $t[1] }}'{{ isset($t[4]) ? ', '.json_encode($t[4]) : '' }})"><x-icon :name="$t[2]" /></button>
+                                        @endif
+                                    @endforeach
+                                    <button type="button" class="rich-btn" :class="active.link && 'is-active'" title="Link" @click="link()"><x-icon name="link" /></button>
+                                    <button type="button" class="rich-btn" title="Undo (Ctrl+Z)" @click="run('undo')"><x-icon name="undo-2" /></button>
+                                    <button type="button" class="rich-btn" title="Redo (Ctrl+Y)" @click="run('redo')"><x-icon name="redo-2" /></button>
+                                </div>
+                                <div x-ref="editor"></div>
+                                <input type="hidden" :name="name" :value="html">
+                            </div>
+                            @error('body')<p class="error">{{ $message }}</p>@enderror
                             <div class="flex justify-end"><button class="btn btn-primary btn-sm">Add note</button></div>
                         </form>
                     </div>
@@ -218,7 +244,7 @@
                                         <x-action :url="route('notes.destroy', $note)" method="DELETE" confirm="Delete this note?" class="btn btn-icon hover:text-red-fg"><x-icon name="trash-2" /></x-action>
                                     </div>
                                 </div>
-                                <p class="whitespace-pre-line">{{ $note->body }}</p>
+                                <div class="rich">{{ \App\Support\RichText::render($note->body) }}</div>
                             </div>
                         @endforeach
                     </div>

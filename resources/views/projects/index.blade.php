@@ -7,14 +7,14 @@
         <x-slot:actions>
             @can('projects.manage')<a href="{{ route('clients.index') }}" class="btn btn-ghost"><x-icon name="building-2" /> Clients</a>@endcan
             <div class="seg">
-                <a href="{{ route('projects.index', ['view' => 'table'] + request()->except('view', 'page')) }}" @class(['seg-item', 'seg-active' => $view !== 'board'])>Table</a>
-                <a href="{{ route('projects.index', ['view' => 'board'] + request()->except('view', 'page')) }}" @class(['seg-item', 'seg-active' => $view === 'board'])>Board</a>
+                <!-- <a href="{{ route('projects.index', ['view' => 'table'] + request()->except('view', 'page')) }}" @class(['seg-item', 'seg-active' => $view !== 'board'])>Table</a> -->
+                <!-- <a href="{{ route('projects.index', ['view' => 'board'] + request()->except('view', 'page')) }}" @class(['seg-item', 'seg-active' => $view === 'board'])>Board</a> -->
             </div>
             @can('projects.manage')<a href="{{ route('projects.create') }}" class="btn btn-primary"><x-icon name="plus" /> New project</a>@endcan
         </x-slot:actions>
     </x-page-header>
 
-    <form class="flex flex-wrap items-center gap-3 mb-3.5">
+    <form class="flex flex-wrap items-center gap-3 mb-3.5 hide" style="display:none">
         <input type="hidden" name="view" value="{{ $view }}">
         @if (request('status'))<input type="hidden" name="status" value="{{ request('status') }}">@endif
         @if ($view !== 'board')

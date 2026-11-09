@@ -24,7 +24,7 @@
         <form method="POST" action="{{ url('/login') }}" class="w-full max-w-sm space-y-5" style="margin-top: -25%;">
             @csrf
             @if (file_exists(public_path('images/nr-logo.png')))
-                <img src="{{ asset('images/nr-logo.png') }}" alt="{{ \App\Models\Setting::get('company.name') }}" class="mx-auto h-20 w-auto" style="width: 40%;">
+                <img src="{{ asset('images/nr-logo.png') }}" alt="{{ \App\Models\Setting::get('company.name') }}" class="mx-auto h-40 w-auto" style="width: 40%;">
             @endif
             <div>
                 <h2 class="text-2xl font-semibold">Welcome back</h2>

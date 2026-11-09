@@ -1,6 +1,7 @@
 import './bootstrap';
 import Alpine from 'alpinejs';
 import { lineItems } from './line-items';
+import { richEditor } from './rich-editor';
 import { renderCharts } from './charts';
 import { renderIcons } from './icons';
 
@@ -27,6 +28,9 @@ Alpine.store('drawer', {
     open(name, payload = {}) { this.name = name; this.payload = payload; },
     close() { this.name = null; },
 });
+
+/* Rich text notes. */
+Alpine.data('richEditor', richEditor);
 
 /* Toasts. */
 Alpine.store('toasts', {
