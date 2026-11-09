@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
@@ -28,8 +29,10 @@ class AccountController extends Controller
     public function update(Request $request)
     {
         $user = $request->user();
+        User::normalizeUsername($request);
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
+            'username' => User::usernameRules($user),
             'email' => ['required', 'email', 'max:255', Rule::unique('users')->ignore($user)],
             'phone' => ['nullable', 'string', 'max:30'],
             'address' => ['nullable', 'string', 'max:1000'],
@@ -38,7 +41,7 @@ class AccountController extends Controller
             'photo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
         ], ['photo.max' => 'The photo must be 4 MB or smaller.']);
 
-        $user->update(collect($data)->only('name', 'email', 'phone')->all());
+        $user->update(collect($data)->only('name', 'username', 'email', 'phone')->all());
 
         // Contact details and photo live on the linked employee record.
         if ($employee = $user->employee) {

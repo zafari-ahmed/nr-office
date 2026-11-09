@@ -16,13 +16,18 @@ class LoginController extends Controller
 
     public function login(Request $request)
     {
-        $credentials = $request->validate([
-            'email' => ['required', 'email'],
+        $data = $request->validate([
+            'login' => ['required', 'string', 'max:255'],
             'password' => ['required'],
-        ]);
+        ], ['login.required' => 'Enter your username or email.']);
 
-        if (! Auth::attempt([...$credentials, 'is_active' => true], $request->boolean('remember'))) {
-            throw ValidationException::withMessages(['email' => 'These credentials do not match an active account.']);
+        // One box for both: anything with an "@" is an email, otherwise a username.
+        $login = trim($data['login']);
+        $field = str_contains($login, '@') ? 'email' : 'username';
+        $value = $field === 'username' ? strtolower($login) : $login;
+
+        if (! Auth::attempt([$field => $value, 'password' => $data['password'], 'is_active' => true], $request->boolean('remember'))) {
+            throw ValidationException::withMessages(['login' => 'These credentials do not match an active account.']);
         }
 
         $request->session()->regenerate();

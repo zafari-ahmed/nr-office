@@ -19,8 +19,27 @@ class User extends Authenticatable
     ];
 
     protected $fillable = [
-        'name', 'email', 'phone', 'password', 'role', 'employee_id', 'is_active', 'last_login_at',
+        'name', 'username', 'email', 'phone', 'password', 'role', 'employee_id', 'is_active', 'last_login_at',
     ];
+
+    /** Usernames: letters, numbers, dot, dash and underscore (never "@", so they can't be confused with an email). */
+    /** Lower-case and trim the posted username before validating, so "Ali" and "ali" count as the same name. */
+    public static function normalizeUsername(\Illuminate\Http\Request $request, string $key = 'username'): void
+    {
+        if ($request->has($key)) {
+            $request->merge([$key => filled($request->input($key)) ? strtolower(trim((string) $request->input($key))) : null]);
+        }
+    }
+
+    public static function usernameRules(?self $ignore = null): array
+    {
+        return ['nullable', 'string', 'max:50', 'regex:/^[A-Za-z0-9._-]+$/', \Illuminate\Validation\Rule::unique('users', 'username')->ignore($ignore)];
+    }
+
+    protected function username(): \Illuminate\Database\Eloquent\Casts\Attribute
+    {
+        return \Illuminate\Database\Eloquent\Casts\Attribute::set(fn ($value) => filled($value) ? strtolower(trim($value)) : null);
+    }
 
     protected $hidden = ['password', 'remember_token'];
 

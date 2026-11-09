@@ -7,6 +7,7 @@
             @if ($user->exists) @method('PUT') @endif
             <x-field label="Name" name="name" :value="$user->name" required />
             <div class="grid sm:grid-cols-2 gap-4">
+                <x-field label="Username" name="username" :value="$user->username" hint="Optional. They can sign in with this or their email." autocomplete="off" />
                 <x-field label="Email" name="email" type="email" :value="$user->email" required />
                 <x-field label="Phone" name="phone" :value="$user->phone" />
                 <x-field label="Role" name="role" :options="$roles" :value="$user->role" required />

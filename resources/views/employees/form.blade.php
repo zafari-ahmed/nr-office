@@ -85,6 +85,7 @@
                         <template x-if="on">
                             <div class="space-y-4">
                                 <x-field label="Login email" name="login_email" type="email" :value="$login?->email ?? $employee->email" required hint="Usually their work email" />
+                                <x-field label="Username" name="login_username" :value="$login?->username" hint="Optional. They can sign in with this or their email." autocomplete="off" />
                                 <x-field label="Role" name="login_role" :options="auth()->user()->isAdmin() ? \App\Models\User::ROLES : array_diff_key(\App\Models\User::ROLES, ['admin' => 1])" :value="$login?->role ?? 'staff'" required />
                                 <x-field :label="$login ? 'New password' : 'Password'" name="login_password" type="password" :required="! $login" :hint="$login ? 'Leave blank to keep their current password' : 'At least 8 characters. Share it with them; they can change it from their profile.'" autocomplete="new-password" />
                             </div>

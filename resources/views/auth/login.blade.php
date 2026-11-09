@@ -30,7 +30,7 @@
                 <h2 class="text-2xl font-semibold">Welcome back</h2>
                 <p class="text-muted mt-1">Sign in to the office system.</p>
             </div>
-            <x-field label="Email" name="email" type="email" required autofocus autocomplete="username" />
+            <x-field label="Username or email" name="login" required autofocus autocomplete="username" autocapitalize="none" spellcheck="false" />
             <x-field label="Password" name="password" type="password" required autocomplete="current-password" />
             <label class="flex items-center gap-2 text-sm text-muted"><input type="checkbox" name="remember" class="checkbox"> Keep me signed in</label>
             <button class="btn btn-primary w-full h-10">Sign in</button>

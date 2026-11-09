@@ -101,8 +101,10 @@ class UserController extends Controller
 
     private function validated(Request $request, ?User $user = null): array
     {
+        User::normalizeUsername($request);
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
+            'username' => User::usernameRules($user),
             'email' => ['required', 'email', 'max:255', Rule::unique('users')->ignore($user)],
             'phone' => ['nullable', 'string', 'max:30'],
             // Only an Admin can make someone an Admin.

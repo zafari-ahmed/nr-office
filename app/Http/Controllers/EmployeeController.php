@@ -177,13 +177,15 @@ class EmployeeController extends Controller
             return ['enabled' => false];
         }
         $roles = $request->user()->isAdmin() ? User::ROLES : array_diff_key(User::ROLES, ['admin' => 1]);
+        User::normalizeUsername($request, 'login_username');
         $login = $request->validate([
             'login_email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user)],
+            'login_username' => User::usernameRules($user),
             'login_role' => ['required', Rule::in(array_keys($roles))],
             'login_password' => [$user ? 'nullable' : 'required', Password::min(8)],
         ], ['login_email.required' => 'Enter the email they will sign in with.', 'login_password.required' => 'Set a password for their first sign-in.']);
 
-        return ['enabled' => true, 'email' => $login['login_email'], 'role' => $login['login_role'], 'password' => $login['login_password'] ?? null];
+        return ['enabled' => true, 'email' => $login['login_email'], 'username' => $login['login_username'] ?? null, 'role' => $login['login_role'], 'password' => $login['login_password'] ?? null];
     }
 
     private function syncLogin(Request $request, Employee $employee, ?array $login): void
@@ -204,7 +206,7 @@ class EmployeeController extends Controller
 
             return;
         }
-        $fields = ['name' => $employee->full_name, 'phone' => $employee->phone, 'email' => $login['email'], 'role' => $login['role'], 'is_active' => $current]
+        $fields = ['name' => $employee->full_name, 'phone' => $employee->phone, 'email' => $login['email'], 'username' => $login['username'], 'role' => $login['role'], 'is_active' => $current]
             + ($login['password'] ? ['password' => $login['password']] : []);
         if ($user) {
             if ($user->is($request->user())) {

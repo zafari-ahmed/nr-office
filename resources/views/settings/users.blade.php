@@ -11,7 +11,7 @@
                     <tbody>
                     @foreach ($users as $u)
                         <tr>
-                            <td><div class="flex items-center gap-2.5"><x-avatar :name="$u->name" size="size-8 text-[11px]" /><div><div class="font-medium">{{ $u->name }}</div><div class="text-xs text-muted">{{ $u->email }}</div></div></div></td>
+                            <td><div class="flex items-center gap-2.5"><x-avatar :name="$u->name" size="size-8 text-[11px]" /><div><div class="font-medium">{{ $u->name }}</div><div class="text-xs text-muted">{{ $u->username ? '@'.$u->username.' · ' : '' }}{{ $u->email }}</div></div></div></td>
                             <td>{{ \App\Models\User::ROLES[$u->role] ?? $u->role }}</td>
                             <td>{{ $u->employee?->full_name ?? '—' }}</td>
                             <td class="text-muted">{{ $u->last_login_at?->diffForHumans() ?? 'Never' }}</td>

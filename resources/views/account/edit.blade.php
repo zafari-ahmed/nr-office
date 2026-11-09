@@ -11,7 +11,7 @@
             @csrf @method('PUT')
             <div class="px-5 py-4 border-b border-line">
                 <h2 class="card-title">Edit profile</h2>
-                <p class="text-[13px] text-ink-2 mt-0.5">Your name and email are used to sign in and on notifications.</p>
+                <p class="text-[13px] text-ink-2 mt-0.5">Your username or email is used to sign in and on notifications.</p>
             </div>
             <div class="p-5 space-y-5">
                 @if ($employee)
@@ -29,6 +29,7 @@
                 @endif
                 <div class="grid sm:grid-cols-2 gap-4">
                     <x-field label="Full name" name="name" :value="$user->name" required />
+                    <x-field label="Username" name="username" :value="$user->username" hint="Optional. Sign in with this or your email." autocomplete="off" />
                     <x-field label="Email" name="email" type="email" :value="$user->email" required />
                     <x-field label="Phone" name="phone" :value="$user->phone ?? $employee?->phone" placeholder="0300-1234567" />
                 </div>
