@@ -15,8 +15,9 @@
             <span class="font-semibold text-lg">{{ \App\Models\Setting::get('company.name') }}</span>
         </div>
         <div>
-            <h1 class="text-3xl font-semibold leading-tight max-w-md">Projects, money, people and site visits in one calm place.</h1>
-            <p class="mt-4 opacity-80 max-w-md">Follow-ups, quotations, invoices, expenses, inventory and the site rotation, all in sync for the whole office.</p>
+            <div class="text-xs font-medium uppercase tracking-[0.2em] opacity-70 mb-4">Internal Office Portal</div>
+            <h1 class="text-3xl font-semibold leading-tight max-w-md">Engineering excellence, managed with precision.</h1>
+            <p class="mt-4 opacity-80 max-w-md">One secure workspace for project delivery, commercial records, finance, personnel and site deployment across NR &amp; Associates.</p>
         </div>
         <div class="text-sm opacity-70">{{ \App\Models\Setting::get('company.tagline') }}</div>
     </div>
