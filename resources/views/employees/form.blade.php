@@ -1,20 +1,31 @@
 <x-layouts.app :title="$employee->exists ? 'Edit employee' : 'Add employee'">
     <x-page-header :title="$employee->exists ? 'Edit '.$employee->full_name : 'Add employee'" :subtitle="'Employee code '.$employee->employee_code" />
 
-    <form method="POST" action="{{ $employee->exists ? route('employees.update', $employee) : route('employees.store') }}" enctype="multipart/form-data" class="grid lg:grid-cols-3 gap-6">
+    @php
+        $login = $employee->user;
+        $loginEmail = (string) old('login_email', $login?->email ?? $employee->email);
+        $loginUsername = (string) old('login_username', $login?->username);
+    @endphp
+    {{-- The App login copies the Email field and builds a username from the full name as you type, until you change those login fields yourself. --}}
+    <form method="POST" action="{{ $employee->exists ? route('employees.update', $employee) : route('employees.store') }}" enctype="multipart/form-data" class="grid lg:grid-cols-3 gap-6"
+          x-data="{ email: @js((string) old('email', $employee->email)), fullName: @js((string) old('full_name', $employee->full_name)),
+                    loginEmail: @js($loginEmail), username: @js($loginUsername),
+                    emailTouched: @js($loginEmail !== '' && $loginEmail !== (string) old('email', $employee->email)), userTouched: @js($loginUsername !== ''),
+                    slug(name) { return (name || '').normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '.').replace(/^\.+|\.+$/g, '').slice(0, 50) },
+                    init() { if (!this.userTouched) this.username = this.slug(this.fullName) } }">
         @csrf
         @if ($employee->exists) @method('PUT') @endif
         <div class="lg:col-span-2 space-y-6">
             <div class="card card-pad space-y-4">
                 <h2 class="card-title">Personal</h2>
                 <div class="grid sm:grid-cols-2 gap-4">
-                    <x-field label="Full name" name="full_name" :value="$employee->full_name" required />
+                    <x-field label="Full name" name="full_name" :value="$employee->full_name" required x-model="fullName" x-on:input="userTouched || (username = slug(fullName))" />
                     <x-field label="Father's name" name="father_name" :value="$employee->father_name" />
                     <x-field label="CNIC" name="cnic" :value="$employee->cnic" placeholder="35202-1234567-1" pattern="\d{5}-\d{7}-\d" />
                     <x-field label="Date of birth" name="date_of_birth" type="date" :value="$employee->date_of_birth" />
                     <x-field label="Gender" name="gender" :options="['male' => 'Male', 'female' => 'Female', 'other' => 'Other']" blank="—" :value="$employee->gender" />
                     <x-field label="Phone" name="phone" :value="$employee->phone" placeholder="0300-1234567" />
-                    <x-field label="Email" name="email" type="email" :value="$employee->email" />
+                    <x-field label="Email" name="email" type="email" :value="$employee->email" x-model="email" x-on:input="emailTouched || (loginEmail = email)" />
                 </div>
                 <x-field label="Address" name="address" type="textarea" rows="2" :value="$employee->address" />
                 <div class="grid sm:grid-cols-2 gap-4">
@@ -72,11 +83,11 @@
                 <x-field label="Account / IBAN" name="bank_account_no" :value="$employee->bank_account_no" />
             </div>
             @can('users.manage')
-                @php $login = $employee->user; $locked = $login?->isAdmin() && ! auth()->user()->isAdmin(); @endphp
+                @php $locked = $login?->isAdmin() && ! auth()->user()->isAdmin(); @endphp
                 <div class="card card-pad space-y-4" x-data="{ on: {{ old('login_enabled', $login?->is_active ? 1 : 0) ? 'true' : 'false' }} }">
                     <div>
                         <h2 class="card-title">App login</h2>
-                        <p class="text-[12.5px] text-ink-2 mt-0.5">Lets this employee sign in. Staff see only their own profile, team projects and their own expenses.</p>
+                        <p class="text-[12.5px] text-ink-2 mt-0.5">Lets this employee sign in. Staff can see projects and add updates, add their own expenses and check the site rotation.</p>
                     </div>
                     @if ($locked)
                         <p class="text-[13px] text-muted">Signs in as {{ $login->email }} (Owner / Admin). Only an Admin can change this login.</p>
@@ -84,8 +95,8 @@
                         <label class="flex items-center gap-2 text-sm"><input type="hidden" name="login_enabled" value="0"><input type="checkbox" name="login_enabled" value="1" class="checkbox" x-model="on"> Can sign in to the app</label>
                         <template x-if="on">
                             <div class="space-y-4">
-                                <x-field label="Login email" name="login_email" type="email" :value="$login?->email ?? $employee->email" required hint="Usually their work email" />
-                                <x-field label="Username" name="login_username" :value="$login?->username" hint="Optional. They can sign in with this or their email." autocomplete="off" />
+                                <x-field label="Login email" name="login_email" type="email" required hint="Copied from Email above. Change it here to use a different one." x-model="loginEmail" x-on:input="emailTouched = loginEmail !== email" />
+                                <x-field label="Username" name="login_username" hint="Made from their name. They can sign in with this or their email." autocomplete="off" x-model="username" x-on:input="userTouched = username !== ''" />
                                 <x-field label="Role" name="login_role" :options="auth()->user()->isAdmin() ? \App\Models\User::ROLES : array_diff_key(\App\Models\User::ROLES, ['admin' => 1])" :value="$login?->role ?? 'staff'" required />
                                 <x-field :label="$login ? 'New password' : 'Password'" name="login_password" type="password" :required="! $login" :hint="$login ? 'Leave blank to keep their current password' : 'At least 8 characters. Share it with them; they can change it from their profile.'" autocomplete="new-password" />
                             </div>
