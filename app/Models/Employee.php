@@ -58,7 +58,13 @@ class Employee extends Model
 
     public function salaryExpenses(): HasMany
     {
-        return $this->hasMany(Expense::class)->latest('expense_date');
+        return $this->hasMany(Expense::class)->whereNotNull('payroll_month')->latest('expense_date');
+    }
+
+    /** Expenses this employee spent or submitted (everything except their salary). */
+    public function spentExpenses(): HasMany
+    {
+        return $this->hasMany(Expense::class)->whereNull('payroll_month')->latest('expense_date')->latest('id');
     }
 
     /** Live status for cards: on_site, on_leave or in_office. */

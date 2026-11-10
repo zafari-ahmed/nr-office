@@ -62,7 +62,7 @@ class ProjectController extends Controller
             'followUps' => fn ($q) => $q->with('assignee')->orderByRaw("status = 'done'")->orderBy('due_date'),
             'quotations' => fn ($q) => $q->latest('issue_date')->latest('revision'),
             'invoices' => fn ($q) => $q->latest('issue_date'),
-            'expenses' => fn ($q) => $q->with('head')->latest('expense_date'),
+            'expenses' => fn ($q) => $q->with('head', 'employee', 'creator')->latest('expense_date'),
             'siteVisits' => fn ($q) => $q->with('employee')->latest('departure_date'),
             'documentLogs' => fn ($q) => $q->with('attachments', 'creator')->latest('sent_date'),
             'notes.user', 'attachments.uploader',

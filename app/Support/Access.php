@@ -61,7 +61,8 @@ class Access
             'dashboard.finance', 'projects.view_all', 'quotations.view', 'invoices.view', 'invoices.manage', 'expenses.view_all',
             'expenses.approve', 'inventory.view', 'employees.view', 'employees.salary', 'rotation.view', 'reports.view',
         ],
-        'staff' => [],
+        // Staff log in to see projects, add updates and their own expenses, and check the site rotation.
+        'staff' => ['projects.view_all', 'rotation.view'],
     ];
 
     /** @return list<string> */

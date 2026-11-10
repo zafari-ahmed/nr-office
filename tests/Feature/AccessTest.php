@@ -39,8 +39,9 @@ class AccessTest extends TestCase
         $this->get('/')->assertOk()->assertDontSee('href="'.route('employees.index').'"', false);
     }
 
-    public function test_staff_only_sees_projects_they_are_on_the_team_of(): void
+    public function test_staff_only_sees_projects_they_are_on_the_team_of_without_see_all(): void
     {
+        Setting::put('access.staff', 'rotation.view');
         $mine = Project::whereHas('members', fn ($q) => $q->whereKey($this->staff->employee_id))->get();
         $other = Project::whereDoesntHave('members', fn ($q) => $q->whereKey($this->staff->employee_id))->where('manager_id', '!=', $this->staff->id)->first();
         $this->assertNotEmpty($mine);
@@ -71,10 +72,59 @@ class AccessTest extends TestCase
     public function test_staff_is_kept_out_of_other_modules(): void
     {
         $this->actingAs($this->staff);
-        foreach (['/quotations', '/invoices', '/inventory', '/rotation', '/reports', '/settings', '/settings/company', '/settings/access', '/clients'] as $url) {
+        foreach (['/quotations', '/invoices', '/inventory', '/reports', '/settings', '/settings/company', '/settings/access', '/clients'] as $url) {
             $this->get($url)->assertForbidden();
         }
         $this->getJson('/search?q=a')->assertOk()->assertJsonMissing(['group' => 'Invoices'])->assertJsonMissing(['group' => 'Employees']);
+    }
+
+    public function test_staff_can_see_projects_and_rotation_but_not_change_them(): void
+    {
+        $other = Project::whereDoesntHave('members', fn ($q) => $q->whereKey($this->staff->employee_id))->where('manager_id', '!=', $this->staff->id)->first();
+        $this->actingAs($this->staff);
+
+        $this->get('/projects')->assertOk()->assertSee($other->name);
+        $this->get('/projects/'.$other->id)->assertOk()->assertDontSee('New quotation');
+        $this->get('/projects/'.$other->id.'/edit')->assertForbidden();
+        $this->patch('/projects/'.$other->id.'/status', ['status' => 'completed'])->assertForbidden();
+
+        // Updates: notes and follow-ups on any project; they can remove only their own.
+        $this->post('/projects/'.$other->id.'/notes', ['body' => '<p>Site slab poured today</p>'])->assertRedirect();
+        $mine = $other->notes()->latest('id')->first();
+        $this->post('/projects/'.$other->id.'/follow-ups', ['title' => 'Call the contractor', 'due_date' => today()->addDay()->toDateString()])->assertSessionHasNoErrors();
+        $adminNote = $other->notes()->create(['body' => '<p>Admin note</p>', 'user_id' => User::where('role', 'admin')->value('id')]);
+        $this->delete('/notes/'.$adminNote->id)->assertForbidden();
+        $this->delete('/notes/'.$mine->id)->assertRedirect();
+
+        $this->get('/rotation')->assertOk()->assertDontSee('Schedule visit');
+        $this->post('/rotation', [])->assertForbidden();
+    }
+
+    public function test_staff_expenses_belong_to_their_employee_profile(): void
+    {
+        $head = \App\Models\ExpenseHead::where('slug', '!=', 'salary')->where('links_project', false)->value('id');
+        $other = Employee::whereKeyNot($this->staff->employee_id)->first();
+        $this->actingAs($this->staff);
+        $this->get('/expenses')->assertOk()->assertSee('Saved under your name');
+
+        // Even if they try to file it under someone else.
+        $this->post('/expenses', ['expense_head_id' => $head, 'expense_date' => today()->toDateString(), 'amount' => 900, 'description' => 'Fuel for site visit', 'payment_method' => 'cash', 'employee_id' => $other->id])->assertForbidden();
+        $this->post('/expenses', ['expense_head_id' => $head, 'expense_date' => today()->toDateString(), 'amount' => 900, 'description' => 'Fuel for site visit', 'payment_method' => 'cash'])->assertSessionHasNoErrors();
+        $expense = Expense::where('description', 'Fuel for site visit')->first();
+        $this->assertSame($this->staff->employee_id, $expense->employee_id);
+        $this->assertNull($expense->payroll_month);
+
+        $this->get('/employees/'.$this->staff->employee_id.'?tab=expenses')->assertOk()->assertSee('Fuel for site visit');
+
+        // Admin sees who spent it and can filter by employee.
+        $this->actingAs(User::where('role', 'admin')->first());
+        $this->get('/expenses?employee='.$this->staff->employee_id)->assertOk()->assertSee('Fuel for site visit')->assertSee($this->staff->employee->employee_code);
+        $this->get('/expenses?employee='.$other->id)->assertOk()->assertDontSee('Fuel for site visit');
+        $this->post('/expenses', ['expense_head_id' => $head, 'expense_date' => today()->toDateString(), 'amount' => 500, 'description' => 'Printer paper', 'payment_method' => 'cash'])->assertSessionHasNoErrors();
+        $this->assertNull(Expense::where('description', 'Printer paper')->value('employee_id'));
+        $this->post('/expenses', ['expense_head_id' => $head, 'expense_date' => today()->toDateString(), 'amount' => 700, 'description' => 'Site lunch', 'payment_method' => 'cash', 'employee_id' => $other->id])->assertSessionHasNoErrors();
+        $this->assertSame($other->id, Expense::where('description', 'Site lunch')->value('employee_id'));
+        $this->assertFalse($other->salaryExpenses()->where('description', 'Site lunch')->exists());
     }
 
     public function test_admin_can_change_access_rights(): void

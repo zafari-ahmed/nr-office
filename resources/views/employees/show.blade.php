@@ -1,7 +1,7 @@
 <x-layouts.app :title="$employee->full_name">
     @php
         $liveLabels = ['in_office' => 'In office', 'on_site' => 'On site', 'on_leave' => 'On leave'];
-        $tabs = ['profile' => 'Profile', 'salary' => 'Salary history', 'visits' => 'Site visits', 'assets' => 'Assigned assets', 'documents' => 'Documents'];
+        $tabs = ['profile' => 'Profile', 'salary' => 'Salary history', 'visits' => 'Site visits', 'expenses' => 'Expenses', 'assets' => 'Assigned assets', 'documents' => 'Documents'];
     @endphp
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div class="flex items-center gap-4">
@@ -39,6 +39,7 @@
     <nav class="tabs mb-5">
         @foreach ($tabs as $key => $label)
             @continue($key === 'salary' && ! $canSeeSalary)
+            @continue($key === 'expenses' && $expenses === null)
             <a href="{{ route('employees.show', [$employee, 'tab' => $key]) }}" @class(['tab', 'tab-active' => $tab === $key])>{{ $label }}</a>
         @endforeach
     </nav>
@@ -109,6 +110,34 @@
                     </tbody>
                 </table>
             </div>
+            @break
+
+        @case('expenses')
+            @if ($expenses !== null)
+                <div class="card overflow-x-auto">
+                    <div class="flex items-center justify-between px-4 py-3 border-b border-line">
+                        <div class="text-[13px] text-muted">{{ $expenses->count() }} {{ \Illuminate\Support\Str::plural('expense', $expenses->count()) }} · {{ money($expenses->where('status', 'approved')->sum('amount')) }} approved · {{ money($expenses->where('status', 'pending')->sum('amount')) }} pending</div>
+                        <a href="{{ route('expenses.index', auth()->user()->hasPermission('employees.view') ? ['employee' => $employee->id] : []) }}" class="text-[13px] font-medium">Open in Expenses</a>
+                    </div>
+                    <table class="table">
+                        <thead><tr><th>Date</th><th>Description</th><th>Head</th><th>Project</th><th class="text-right">Amount</th><th>Status</th></tr></thead>
+                        <tbody>
+                        @forelse ($expenses as $e)
+                            <tr>
+                                <td class="whitespace-nowrap text-ink-2">{{ $e->expense_date->format('d M Y') }}</td>
+                                <td><div class="font-medium">{{ $e->description }}</div>@if ($e->vendor)<div class="text-[12px] text-muted">{{ $e->vendor }}</div>@endif</td>
+                                <td class="text-ink-2">{{ $e->head?->name }}</td>
+                                <td class="text-ink-2">{{ $e->project?->name ?? '—' }}</td>
+                                <td class="text-right tabular-nums font-semibold whitespace-nowrap">{{ money($e->amount) }}</td>
+                                <td><x-pill :status="$e->status" /></td>
+                            </tr>
+                        @empty
+                            <tr><td colspan="6"><x-empty icon="wallet" title="No expenses yet" text="Expenses this employee adds, or that are filed under their name, show here." /></td></tr>
+                        @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            @endif
             @break
 
         @case('assets')

@@ -54,6 +54,12 @@
         <form class="flex gap-2 ml-auto">
             <input type="hidden" name="month" value="{{ $month->format('Y-m') }}">
             @if (request('head'))<input type="hidden" name="head" value="{{ request('head') }}">@endif
+            @if ($canPickEmployee)
+                <select name="employee" class="input !h-[30px] !w-44 !text-[12.5px]" onchange="this.form.submit()">
+                    <option value="">All employees</option>
+                    @foreach ($employees as $emp)<option value="{{ $emp->id }}" @selected((string) request('employee') === (string) $emp->id)>{{ $emp->full_name }}</option>@endforeach
+                </select>
+            @endif
             <select name="status" class="input !h-[30px] !w-36 !text-[12.5px]" onchange="this.form.submit()">
                 <option value="">Any status</option>
                 @foreach (\App\Models\Expense::STATUSES as $k => $l)<option value="{{ $k }}" @selected(request('status') === $k)>{{ $l }}</option>@endforeach
@@ -68,10 +74,15 @@
     <div class="card overflow-hidden">
         <div class="overflow-x-auto">
             <table class="table">
-                <thead><tr><th>Date</th><th>Description</th><th>Head</th><th>Project</th><th>Paid by</th><th class="text-right">Amount</th><th>Status</th><th></th></tr></thead>
+                <thead><tr><th>Date</th><th>Description</th><th>Head</th><th>Project</th><th>Spent by</th><th class="text-right">Amount</th><th>Status</th><th></th></tr></thead>
                 <tbody>
                 @forelse ($expenses as $e)
-                    @php $payer = $e->employee?->full_name ?? $e->creator?->name; @endphp
+                    @php
+                        // The employee the expense belongs to; older expenses fall back to whoever added it.
+                        $payer = $e->employee?->full_name ?? $e->creator?->name;
+                        $payerCode = $e->employee?->employee_code ?? $e->creator?->employee?->employee_code;
+                        $addedBy = $e->creator && $e->creator->employee_id !== $e->employee_id ? $e->creator->name : null;
+                    @endphp
                     <tr>
                         <td class="whitespace-nowrap text-ink-2">{{ $e->expense_date->format('j M') }}</td>
                         <td>
@@ -82,7 +93,12 @@
                         </td>
                         <td class="text-ink-2">{{ $e->head->name }}</td>
                         <td class="text-ink-2">{{ $e->project?->name ?? '—' }}</td>
-                        <td>@if ($payer)<span class="inline-flex items-center gap-2 whitespace-nowrap"><x-avatar :name="$payer" size="size-6 text-[9.5px]" />{{ $payer }}</span>@endif</td>
+                        <td>@if ($payer)
+                            <span class="inline-flex items-center gap-2 whitespace-nowrap" @if ($addedBy) title="Added by {{ $addedBy }}" @endif>
+                                <x-avatar :name="$payer" size="size-6 text-[9.5px]" />
+                                <span class="leading-tight">{{ $payer }}@if ($payerCode)<span class="block text-[11.5px] text-muted">{{ $payerCode }}</span>@endif</span>
+                            </span>
+                        @else<span class="text-muted">Office</span>@endif</td>
                         <td class="text-right tabular-nums font-semibold whitespace-nowrap">{{ money($e->amount) }}</td>
                         <td><x-pill :status="$e->status" /></td>
                         <td class="text-right whitespace-nowrap">

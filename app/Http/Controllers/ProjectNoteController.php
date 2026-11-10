@@ -30,9 +30,11 @@ class ProjectNoteController extends Controller
         return back();
     }
 
-    public function destroy(ProjectNote $note)
+    public function destroy(Request $request, ProjectNote $note)
     {
         $this->ensureCanSeeProject($note->project);
+        // People who can't edit projects (e.g. Staff) can remove only the notes they wrote.
+        abort_unless($request->user()->hasPermission('projects.manage') || $note->user_id === $request->user()->id, 403, 'You can only delete your own notes.');
         $note->delete();
 
         return back()->with('success', 'Note deleted.');
