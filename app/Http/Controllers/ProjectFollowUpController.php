@@ -46,9 +46,10 @@ class ProjectFollowUpController extends Controller
         return back()->with('success', 'Snoozed to '.$newDate->format('d M').'.');
     }
 
-    public function destroy(ProjectFollowUp $followUp)
+    public function destroy(Request $request, ProjectFollowUp $followUp)
     {
         $this->ensureCanSeeProject($followUp->project);
+        abort_unless($request->user()->hasPermission('projects.manage') || $followUp->created_by === $request->user()->id, 403, 'You can only remove your own follow-ups.');
         $followUp->delete();
 
         return back()->with('success', 'Follow-up removed.');

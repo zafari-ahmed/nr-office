@@ -100,7 +100,9 @@
                                 @else
                                     <span class="text-xs text-muted">Done {{ $f->completed_at?->format('d M') }}</span>
                                 @endif
-                                <x-action :url="route('follow-ups.destroy', $f)" method="DELETE" confirm="Delete this follow-up?" class="btn btn-icon !size-7 !w-7 hover:text-red-fg" title="Delete"><x-icon name="trash-2" class="!size-3.5" /></x-action>
+                                @if ($me->hasPermission('projects.manage') || $f->created_by === $me->id)
+                                    <x-action :url="route('follow-ups.destroy', $f)" method="DELETE" confirm="Delete this follow-up?" class="btn btn-icon !size-7 !w-7 hover:text-red-fg" title="Delete"><x-icon name="trash-2" class="!size-3.5" /></x-action>
+                                @endif
                             </div>
                         @empty
                             <x-empty icon="calendar-clock" title="No follow-ups yet"><button class="btn btn-primary" @click="$store.drawer.open('follow-up-{{ $project->id }}')">Add follow-up</button></x-empty>
@@ -151,13 +153,13 @@
                     <div class="flex justify-end mb-3"><button class="btn btn-primary btn-sm" @click="$store.drawer.open('expense')"><x-icon name="plus" /> Add expense</button></div>
                     <div class="card overflow-x-auto">
                         <table class="table">
-                            <thead><tr><th>Date</th><th>Head</th><th>Description</th><th>Status</th><th class="text-right">Amount</th><th class="w-10"></th></tr></thead>
+                            <thead><tr><th>Date</th><th>Head</th><th>Description</th><th>Spent by</th><th>Status</th><th class="text-right">Amount</th><th class="w-10"></th></tr></thead>
                             <tbody>
                             @forelse ($projectExpenses as $e)
-                                <tr><td>{{ $e->expense_date->format('d M Y') }}</td><td>{{ $e->head->name }}</td><td>{{ $e->description }}</td><td><x-pill :status="$e->status" /></td><td class="text-right tabular-nums">{{ money($e->amount) }}</td>
+                                <tr><td>{{ $e->expense_date->format('d M Y') }}</td><td>{{ $e->head->name }}</td><td>{{ $e->description }}</td><td class="text-ink-2 whitespace-nowrap">{{ $e->employee?->full_name ?? $e->creator?->name ?? 'Office' }}</td><td><x-pill :status="$e->status" /></td><td class="text-right tabular-nums">{{ money($e->amount) }}</td>
                                     <td class="text-right whitespace-nowrap">@if (auth()->user()->hasPermission('expenses.approve') || (auth()->user()->ownsExpense($e) && $e->status === 'pending'))<button type="button" class="btn btn-icon !size-7 !w-7 hover:text-accent" title="Edit" @click="$store.drawer.open('expense', @js($e->editPayload()))"><x-icon name="pencil" class="!size-3.5" /></button><x-action :url="route('expenses.destroy', $e)" method="DELETE" confirm="Delete this expense?" class="btn btn-icon !size-7 !w-7 hover:text-red-fg" title="Delete"><x-icon name="trash-2" class="!size-3.5" /></x-action>@endif</td></tr>
                             @empty
-                                <tr><td colspan="6"><x-empty icon="wallet" title="No expenses linked to this project" /></td></tr>
+                                <tr><td colspan="7"><x-empty icon="wallet" title="No expenses linked to this project" /></td></tr>
                             @endforelse
                             </tbody>
                         </table>
@@ -241,7 +243,9 @@
                                     <div class="flex items-center gap-2 text-[13px]"><x-avatar :name="$note->user?->name ?? '?'" size="size-6 text-[10px]" /> <span class="font-medium">{{ $note->user?->name }}</span> <span class="text-muted">{{ $note->created_at->diffForHumans() }}</span></div>
                                     <div class="flex">
                                         <x-action :url="route('notes.pin', $note)" @class(['btn btn-icon', 'text-accent' => $note->is_pinned]) title="Pin"><x-icon name="pin" /></x-action>
-                                        <x-action :url="route('notes.destroy', $note)" method="DELETE" confirm="Delete this note?" class="btn btn-icon hover:text-red-fg"><x-icon name="trash-2" /></x-action>
+                                        @if ($me->hasPermission('projects.manage') || $note->user_id === $me->id)
+                                            <x-action :url="route('notes.destroy', $note)" method="DELETE" confirm="Delete this note?" class="btn btn-icon hover:text-red-fg"><x-icon name="trash-2" /></x-action>
+                                        @endif
                                     </div>
                                 </div>
                                 <div class="rich">{{ \App\Support\RichText::render($note->body) }}</div>

@@ -212,7 +212,8 @@ class WorkflowTest extends TestCase
         $this->post('/expenses', ['expense_head_id' => $office->id, 'expense_date' => today()->toDateString(), 'amount' => 500, 'description' => 'Tea', 'payment_method' => 'cash', 'employee_id' => $emp->id, 'payroll_month' => '2026-09', 'project_id' => $project->id])
             ->assertSessionHasNoErrors();
         $tea = $office->expenses()->latest('id')->first();
-        $this->assertNull($tea->employee_id);
+        $this->assertSame($emp->id, $tea->employee_id, 'Other heads keep the employee as who spent it.');
+        $this->assertNull($tea->payroll_month);
         $this->assertNull($tea->project_id, 'Only project heads keep a project link.');
     }
 

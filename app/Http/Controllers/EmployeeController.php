@@ -69,6 +69,9 @@ class EmployeeController extends Controller
             'liveStatus' => $employee->liveStatus(),
             'tab' => $request->query('tab', 'profile'),
             'canSeeSalary' => $request->user()->hasPermission('employees.salary'),
+            // Expenses they spent: for the employee themselves and for people who see everyone's expenses.
+            'expenses' => $request->user()->hasPermission('expenses.view_all') || $request->user()->employee_id === $employee->id
+                ? $employee->spentExpenses()->with('head', 'project', 'creator')->limit(100)->get() : null,
         ]);
     }
 

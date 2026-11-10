@@ -23,11 +23,12 @@ class ExpenseController extends Controller
             ->withSum(['expenses as spent' => fn ($q) => $q->visibleTo($user)->where('status', 'approved')->whereBetween('expense_date', $range)], 'amount')
             ->get();
 
-        $expenses = Expense::visibleTo($user)->with('head', 'project', 'employee', 'attachments', 'creator')
+        $expenses = Expense::visibleTo($user)->with('head', 'project', 'employee', 'attachments', 'creator.employee')
             ->whereBetween('expense_date', $range)
             ->when($request->head, fn ($q, $h) => $q->where('expense_head_id', $h))
             ->when($request->status, fn ($q, $s) => $q->where('status', $s))
             ->when($request->project, fn ($q, $p) => $q->where('project_id', $p))
+            ->when($request->employee, fn ($q, $e) => $q->where('employee_id', $e))
             ->latest('expense_date')->latest('id')->paginate(25)->withQueryString();
 
         return view('expenses.index', [
@@ -41,7 +42,8 @@ class ExpenseController extends Controller
             'seeAll' => $user->hasPermission('expenses.view_all'),
             'projects' => Project::visibleTo($user)->orderBy('name')->get(['id', 'name', 'code']),
             'employees' => Employee::active()->when(! $user->hasPermission('employees.view'), fn ($q) => $q->whereKey($user->employee_id))
-                ->orderBy('full_name')->get(['id', 'full_name', 'basic_salary']),
+                ->orderBy('full_name')->get(['id', 'full_name', 'employee_code']),
+            'canPickEmployee' => $user->hasPermission('employees.view'),
         ]);
     }
 
@@ -65,7 +67,7 @@ class ExpenseController extends Controller
     public function update(Request $request, Expense $expense)
     {
         $this->ensureCanChange($request, $expense);
-        $data = $this->validated($request);
+        $data = $this->validated($request, $expense);
         $expense->update(collect($data)->except('receipts')->all());
         $expense->attachFiles($request->file('receipts') ?? [], 'receipt');
 
@@ -102,7 +104,7 @@ class ExpenseController extends Controller
         abort_unless($user->hasPermission('expenses.approve') || ($user->ownsExpense($expense) && $expense->status === 'pending'), 403, 'You can only change your own pending expenses.');
     }
 
-    private function validated(Request $request): array
+    private function validated(Request $request, ?Expense $expense = null): array
     {
         $user = $request->user();
         // Without the directory, people can only file expenses for themselves and for projects they can see.
@@ -148,8 +150,12 @@ class ExpenseController extends Controller
             $data['vendor'] = null;
             $data['project_id'] = null;
         } else {
-            $data['employee_id'] = null;
             $data['payroll_month'] = null;
+            // Who spent it. People without the Employees directory always file under their own employee profile
+            // (an expense someone else already tagged keeps its employee); others pick one or leave it as an office expense.
+            if (! $user->hasPermission('employees.view')) {
+                $data['employee_id'] = $expense?->employee_id ?? $user->employee_id;
+            }
         }
 
         return $data;

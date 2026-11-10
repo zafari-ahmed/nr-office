@@ -60,6 +60,11 @@
                 </div>
                 <x-field label="Description" name="description" required placeholder="e.g. Tea, sugar and cleaning supplies" x-model="description" />
                 <x-field label="Vendor / paid to" name="vendor" x-model="vendor" />
+                @if (auth()->user()->hasPermission('employees.view'))
+                    <x-field label="Spent by" name="employee_id" :options="$employees->pluck('full_name', 'id')" blank="Office (no employee)" x-model="employee" hint="The employee who spent the money. Leave it as Office for company purchases." />
+                @elseif ($me = auth()->user()->employee)
+                    <p class="hint flex items-center gap-1.5 !mt-0"><x-icon name="user" class="size-3.5" /> Saved under your name: {{ $me->full_name }} · {{ $me->employee_code }}</p>
+                @endif
                 <template x-if="isProject">
                     <x-field label="Project" name="project_id" :options="$projects->mapWithKeys(fn ($p) => [$p->id => $p->name.' · '.$p->code])" blank="Choose project…" required x-model="projectId" />
                 </template>
