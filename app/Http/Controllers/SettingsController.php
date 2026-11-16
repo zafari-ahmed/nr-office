@@ -11,6 +11,7 @@ class SettingsController extends Controller
 {
     public const SECTIONS = [
         'company' => ['Company profile', 'building-2'],
+        'branding' => ['Branding', 'image'],
         'users' => ['Users & roles', 'users'],
         'access' => ['Access rights', 'shield-check'],
         'modules' => ['Modules', 'layout-dashboard'],
@@ -83,7 +84,7 @@ class SettingsController extends Controller
     /** The permission each section needs; everything else needs settings.manage. */
     public static function allowed(\App\Models\User $user, string $section): bool
     {
-        if ($section === 'modules') {
+        if (in_array($section, ['modules', 'branding'], true)) {
             return $user->isAdmin();
         }
 
@@ -93,7 +94,7 @@ class SettingsController extends Controller
 
     public static function url(string $section): string
     {
-        return match ($section) { 'users' => route('settings.users.index'), 'access' => route('settings.access.edit'), default => route('settings.show', $section) };
+        return match ($section) { 'users' => route('settings.users.index'), 'access' => route('settings.access.edit'), 'branding' => route('settings.branding.edit'), default => route('settings.show', $section) };
     }
 
     public function home(Request $request)
@@ -106,7 +107,7 @@ class SettingsController extends Controller
 
     public function show(string $section)
     {
-        if (in_array($section, ['users', 'access'], true)) {
+        if (in_array($section, ['users', 'access', 'branding'], true)) {
             return redirect(self::url($section));
         }
         abort_unless(array_key_exists($section, self::SECTIONS), 404);

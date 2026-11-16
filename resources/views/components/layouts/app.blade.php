@@ -30,7 +30,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ isset($title) ? $title.' · ' : '' }}{{ \App\Models\Setting::get('company.name') }} Office</title>
-    @if (file_exists(public_path('images/favicon.png')))<link rel="icon" type="image/png" href="{{ asset('images/favicon.png') }}?v={{ filemtime(public_path('images/favicon.png')) }}">@endif
+    @include('partials.favicon')
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -40,16 +40,58 @@
             if (localStorage.getItem('nr-sidebar') === '1') document.documentElement.classList.add('sb-collapsed');
         } catch (e) {}
     </script>
+    @isset($impersonation)
+        <script>
+            // "Log in as" tab: every link, form and request from this tab carries the key, so only this tab runs as the employee.
+            (() => {
+                const key = @js($impersonation->key);
+                const tag = (url) => {
+                    try {
+                        const u = new URL(url, location.href);
+                        if (u.origin !== location.origin || u.searchParams.has('_as') || u.pathname.startsWith('/impersonation/ended')) return url;
+                        u.searchParams.set('_as', key);
+                        return u.toString();
+                    } catch (e) { return url; }
+                };
+                const tagAll = (root) => {
+                    // Only write when it changes, so the observer below doesn't loop.
+                    root.querySelectorAll?.('a[href]').forEach((a) => { const h = a.getAttribute('href'); const t = tag(a.href); if (h && !h.startsWith('#') && !h.startsWith('javascript:') && t !== a.href) a.href = t; });
+                    root.querySelectorAll?.('form').forEach((f) => { const t = tag(f.action || location.href); if (t !== f.action) f.action = t; });
+                };
+                document.addEventListener('DOMContentLoaded', () => {
+                    tagAll(document);
+                    new MutationObserver((list) => list.forEach((m) => m.target.nodeType === 1 && tagAll(m.target.parentNode || m.target)))
+                        .observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ['href', 'action'] });
+                });
+                document.addEventListener('click', (e) => { const a = e.target.closest?.('a[href]'); if (a && !a.getAttribute('href').startsWith('#') && tag(a.href) !== a.href) a.href = tag(a.href); }, true);
+                document.addEventListener('submit', (e) => { const t = tag(e.target.action || location.href); if (t !== e.target.action) e.target.action = t; }, true);
+                const open = XMLHttpRequest.prototype.open;
+                XMLHttpRequest.prototype.open = function (method, url, ...rest) { return open.call(this, method, tag(String(url)), ...rest); };
+                const fetch = window.fetch;
+                window.fetch = (input, init) => fetch(typeof input === 'string' || input instanceof URL ? tag(String(input)) : input, init);
+            })();
+        </script>
+    @endisset
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="min-h-screen">
+@isset($impersonation)
+    <div class="no-print fixed bottom-4 left-1/2 -translate-x-1/2 z-[70] flex items-center gap-3 max-w-[calc(100vw-2rem)] pl-4 pr-1.5 py-1.5 rounded-full bg-amber-fg text-white shadow-pop text-[13px]" role="status">
+        <x-icon name="eye" class="!size-4" />
+        <span class="truncate">Logged in as <strong>{{ $user->name }}</strong> in this tab only. Your other tabs are still {{ $impersonation->impersonator->name }}.</span>
+        <form method="POST" action="{{ route('impersonation.end', ['_as' => $impersonation->key]) }}" class="shrink-0">
+            @csrf
+            <button class="h-7 px-3 rounded-full bg-white/20 hover:bg-white/30 font-medium">End</button>
+        </form>
+    </div>
+@endisset
 <div x-data class="flex min-h-screen">
 
     {{-- Sidebar --}}
     <div x-cloak x-show="$store.sidebar.mobileOpen" x-transition.opacity class="fixed inset-0 z-40 bg-gray-900/30 lg:hidden" @click="$store.sidebar.mobileOpen = false"></div>
     <aside :class="$store.sidebar.mobileOpen && 'is-open'" class="app-sidebar no-print fixed inset-y-0 left-0 z-50 flex flex-col bg-side border-r border-line">
         <div class="flex items-center gap-2.5 h-14 px-4 border-b border-line">
-            <span class="grid place-items-center size-[30px] rounded-lg bg-accent text-on-accent font-bold text-[12px] tracking-[.02em] shrink-0">NR</span>
+            <x-brand-mark class="size-[30px] rounded-lg" badge="bg-accent text-on-accent font-bold text-[12px] tracking-[.02em]" />
             <div class="sb-label min-w-0">
                 <div class="text-[14px] font-semibold leading-tight truncate">{{ \App\Models\Setting::get('company.name') }}</div>
                 <div class="text-[12px] text-muted leading-tight">Office</div>

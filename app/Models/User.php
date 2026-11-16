@@ -12,7 +12,7 @@ class User extends Authenticatable
     use HasFactory, Notifiable;
 
     public const ROLES = [
-        'admin' => 'Owner / Admin',
+        'admin' => 'Super admin',
         'manager' => 'Manager',
         'accounts' => 'Accounts',
         'staff' => 'Staff',
@@ -68,6 +68,11 @@ class User extends Authenticatable
         $module = \App\Support\Modules::forRoute($permission);
         if ($module && ! \App\Support\Modules::enabled($module)) {
             return false;
+        }
+
+        // Salary tab and history: Super admin and Accounts only.
+        if ($permission === 'employees.salary') {
+            return in_array($this->role, \App\Support\Access::SALARY_ROLES, true);
         }
 
         return $this->isAdmin() || in_array($permission, \App\Support\Access::forRole($this->role), true);

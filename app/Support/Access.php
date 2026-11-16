@@ -37,7 +37,6 @@ class Access
         'Employees' => [
             'employees.view' => ['See all employees', 'The Employees directory. Without this, people only see their own profile.'],
             'employees.manage' => ['Add and edit employees', 'Employee details, leave, documents and photos.'],
-            'employees.salary' => ['See and change salaries', 'Salary history and salary revisions.'],
         ],
         'Site rotation' => [
             'rotation.view' => ['See site rotation', 'Who is on site and the rotation schedule.'],
@@ -50,6 +49,16 @@ class Access
         ],
     ];
 
+    /** Salaries: fixed to these roles, not set on the Access rights screen. */
+    public const SALARY_ROLES = ['admin', 'accounts'];
+
+    /** Rights only a Super admin has; they can't be given to other roles. */
+    public const SUPER_ADMIN_ONLY = [
+        'users.admins' => 'See other Super admin accounts.',
+        'users.impersonate' => 'Change an employee\'s password and log in as them in a separate tab.',
+        'settings.branding' => 'Upload the office logo, sidebar icon and favicon.',
+    ];
+
     /** Starting rights for each role until Admin changes them. */
     public const DEFAULTS = [
         'manager' => [
@@ -59,7 +68,7 @@ class Access
         ],
         'accounts' => [
             'dashboard.finance', 'projects.view_all', 'quotations.view', 'invoices.view', 'invoices.manage', 'expenses.view_all',
-            'expenses.approve', 'inventory.view', 'employees.view', 'employees.salary', 'rotation.view', 'reports.view',
+            'expenses.approve', 'inventory.view', 'employees.view', 'rotation.view', 'reports.view',
         ],
         // Staff log in to see projects, add updates and their own expenses, and check the site rotation.
         'staff' => ['projects.view_all', 'rotation.view'],

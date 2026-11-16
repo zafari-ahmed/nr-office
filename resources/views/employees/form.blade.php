@@ -90,7 +90,7 @@
                         <p class="text-[12.5px] text-ink-2 mt-0.5">Lets this employee sign in. Staff can see projects and add updates, add their own expenses and check the site rotation.</p>
                     </div>
                     @if ($locked)
-                        <p class="text-[13px] text-muted">Signs in as {{ $login->email }} (Owner / Admin). Only an Admin can change this login.</p>
+                        <p class="text-[13px] text-muted">Signs in as {{ $login->email }} (Super admin). Only a Super admin can change this login.</p>
                     @else
                         <label class="flex items-center gap-2 text-sm"><input type="hidden" name="login_enabled" value="0"><input type="checkbox" name="login_enabled" value="1" class="checkbox" x-model="on"> Can sign in to the app</label>
                         <template x-if="on">

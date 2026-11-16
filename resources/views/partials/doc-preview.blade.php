@@ -3,7 +3,11 @@
 <div class="bg-white text-gray-900 rounded-card shadow-card border border-line p-6 sm:p-10 text-[13px] leading-relaxed print:shadow-none print:border-0 print:p-0">
     <div class="flex flex-col sm:flex-row justify-between items-start gap-4 border-b-2 border-[#0a2c5c] pb-5">
         <div>
-            <div class="flex items-center gap-2.5"><span class="grid place-items-center size-10 rounded-lg bg-[#0a2c5c] text-white font-bold text-sm">NR</span><span class="text-lg font-semibold">{{ \App\Models\Setting::get('company.name') }}</span></div>
+            @if ($docLogo = \App\Support\Branding::isCustom('logo') ? \App\Support\Branding::url('logo') : null)
+                <img src="{{ $docLogo }}" alt="{{ \App\Models\Setting::get('company.name') }}" class="h-14 w-auto max-w-56 object-contain">
+            @else
+                <div class="flex items-center gap-2.5"><x-brand-mark class="size-10 rounded-lg" badge="bg-[#0a2c5c] text-white font-bold text-sm" /><span class="text-lg font-semibold">{{ \App\Models\Setting::get('company.name') }}</span></div>
+            @endif
             <div class="text-gray-500 mt-1.5 max-w-xs">{{ \App\Models\Setting::get('company.address') }}<br>{{ \App\Models\Setting::get('company.phone') }} · {{ \App\Models\Setting::get('company.email') }}@if (\App\Models\Setting::get('company.ntn'))<br>NTN {{ \App\Models\Setting::get('company.ntn') }}@endif</div>
         </div>
         <div class="sm:text-right">

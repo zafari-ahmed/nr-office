@@ -31,6 +31,10 @@ class AppServiceProvider extends ServiceProvider
             Gate::define($permission, fn (User $user) => $user->hasPermission($permission));
         }
         Gate::define('access.manage', fn (User $user) => $user->isAdmin());
+        Gate::define('employees.salary', fn (User $user) => $user->hasPermission('employees.salary'));
+        foreach (array_keys(Access::SUPER_ADMIN_ONLY) as $permission) {
+            Gate::define($permission, fn (User $user) => $user->isAdmin());
+        }
 
         // App shell data: notifications, badges and the lists the global quick-add drawers need.
         View::composer('components.layouts.app', function ($view) {

@@ -68,7 +68,11 @@ class EmployeeController extends Controller
             'employee' => $employee,
             'liveStatus' => $employee->liveStatus(),
             'tab' => $request->query('tab', 'profile'),
+            // Salaries are for Super admins only.
             'canSeeSalary' => $request->user()->hasPermission('employees.salary'),
+            'canManageLogin' => $canManageLogin = $request->user()->hasPermission('users.impersonate') && $employee->user !== null,
+            'loginSessions' => $canManageLogin
+                ? \App\Models\Impersonation::with('impersonator')->where('user_id', $employee->user->id)->latest('started_at')->limit(5)->get() : collect(),
             // Expenses they spent: for the employee themselves and for people who see everyone's expenses.
             'expenses' => $request->user()->hasPermission('expenses.view_all') || $request->user()->employee_id === $employee->id
                 ? $employee->spentExpenses()->with('head', 'project', 'creator')->limit(100)->get() : null,

@@ -6,14 +6,14 @@
             @csrf @method('PUT')
             <div class="px-5 py-4 border-b border-line">
                 <h2 class="card-title">Access rights</h2>
-                <p class="text-[13px] text-ink-2 mt-0.5">Choose what each role can see and do. Owner / Admin always has full access. Everyone can open their own profile, add their own expenses and see projects they manage or are on the team of.</p>
+                <p class="text-[13px] text-ink-2 mt-0.5">Choose what each role can see and do. Super admin always has full access. Salaries are seen only by Super admin and Accounts. Everyone can open their own profile, add their own expenses and see projects they manage or are on the team of.</p>
             </div>
             <div class="overflow-x-auto">
                 <table class="table">
                     <thead>
                         <tr>
                             <th class="w-full">Permission</th>
-                            <th class="text-center whitespace-nowrap">Owner / Admin</th>
+                            <th class="text-center whitespace-nowrap">Super admin</th>
                             @foreach ($roles as $key => $label)
                                 <th class="text-center whitespace-nowrap">{{ $label }}<div class="text-[11px] font-normal text-muted">{{ $counts[$key] ?? 0 }} {{ str('user')->plural($counts[$key] ?? 0) }}</div></th>
                             @endforeach
@@ -38,6 +38,16 @@
                                     @endforeach
                                 </tr>
                             @endforeach
+                        @endforeach
+                        <tr><td colspan="{{ count($roles) + 2 }}" class="!py-2 bg-surface-2 text-[12px] font-semibold uppercase tracking-[.04em] text-muted">Super admin only</td></tr>
+                        @foreach (\App\Support\Access::SUPER_ADMIN_ONLY as $permission => $hint)
+                            <tr>
+                                <td><div class="text-[13px] text-ink-2">{{ $hint }}</div></td>
+                                <td class="text-center"><span class="switch opacity-50 cursor-not-allowed" title="Only Super admins"><input type="checkbox" checked disabled><span></span></span></td>
+                                @foreach ($roles as $role => $label)
+                                    <td class="text-center"><span class="switch opacity-50 cursor-not-allowed" title="Only Super admins"><input type="checkbox" disabled><span></span></span></td>
+                                @endforeach
+                            </tr>
                         @endforeach
                     </tbody>
                 </table>

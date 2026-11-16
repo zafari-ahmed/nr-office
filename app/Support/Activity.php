@@ -16,7 +16,8 @@ class Activity
             'subject_id' => $subject?->getKey(),
             'action' => $action,
             'description' => $description,
-            'properties' => $properties ?: null,
+            // Done from a "Log in as" tab: record which Super admin really did it.
+            'properties' => ($properties + array_filter(['impersonated_by' => request()->attributes->get('impersonation')?->impersonator_id])) ?: null,
         ]);
     }
 }

@@ -11,10 +11,16 @@ use Illuminate\Validation\Rules\Password;
 
 class UserController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
+        // Super admin accounts are only listed for Super admins, at the top.
+        $users = User::with('employee')->orderBy('name')->get()
+            ->when(! $request->user()->isAdmin(), fn ($list) => $list->reject->isAdmin())
+            ->sortBy(fn (User $u) => $u->isAdmin() ? 0 : 1)->values();
+
         return view('settings.users', [
-            'users' => User::with('employee')->orderBy('name')->get(),
+            'users' => $users,
+            'adminCount' => $users->filter->isAdmin()->count(),
             'sections' => SettingsController::SECTIONS,
             'section' => 'users',
         ]);
@@ -37,6 +43,7 @@ class UserController extends Controller
     public function edit(Request $request, User $user)
     {
         $this->ensureCanTouch($request, $user);
+
         return view('settings.user-form', ['user' => $user, ...$this->formData($user)]);
     }
 
@@ -66,7 +73,7 @@ class UserController extends Controller
     /** Only an Admin can change Admin accounts. */
     private function ensureCanTouch(Request $request, User $user): void
     {
-        abort_if($user->isAdmin() && ! $request->user()->isAdmin(), 403, 'Only an Admin can change Admin accounts.');
+        abort_if($user->isAdmin() && ! $request->user()->isAdmin(), 403, 'Only a Super admin can change Super admin accounts.');
     }
 
     /**

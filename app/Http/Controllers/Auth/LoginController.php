@@ -38,6 +38,8 @@ class LoginController extends Controller
 
     public function logout(Request $request)
     {
+        // Any "Log in as" tabs this admin opened stop working too.
+        \App\Models\Impersonation::active()->where('impersonator_id', $request->user()->id)->get()->each->end('signed_out');
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();

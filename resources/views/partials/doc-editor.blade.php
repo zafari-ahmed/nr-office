@@ -135,7 +135,7 @@
                 <div class="bg-white text-[#14171a] shadow-pop border-b-4 border-[#0a2c5c] aspect-[1/1.414] px-9 py-8 text-[10.5px] leading-snug flex flex-col">
                     <div class="flex justify-between items-start gap-6 pb-4 border-b border-[#e4e7ea]">
                         <div class="flex gap-2.5">
-                            <span class="grid place-items-center size-8 rounded-md bg-[#0a2c5c] text-white font-bold text-[10px] shrink-0">NR</span>
+                            <x-brand-mark class="size-8 rounded-md" badge="bg-[#0a2c5c] text-white font-bold text-[10px]" />
                             <div>
                                 <div class="text-[13px] font-semibold">{{ $s('company.name') }}</div>
                                 <div class="text-[#8a929b] max-w-60 mt-0.5">{{ $s('company.address') }}</div>

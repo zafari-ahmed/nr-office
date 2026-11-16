@@ -14,7 +14,11 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'role' => \App\Http\Middleware\EnsureRole::class,
         ]);
-        $middleware->web(append: [\App\Http\Middleware\EnsureModuleEnabled::class]);
+        // "Log in as" tabs get their own session and run as the employee (see App\Models\Impersonation).
+        $middleware->web(prepend: [\App\Http\Middleware\UseImpersonationSession::class]);
+        $middleware->web(append: [\App\Http\Middleware\Impersonate::class, \App\Http\Middleware\EnsureModuleEnabled::class]);
+        $middleware->prependToPriorityList(before: \Illuminate\Session\Middleware\StartSession::class, prepend: \App\Http\Middleware\UseImpersonationSession::class);
+        $middleware->prependToPriorityList(before: \Illuminate\Contracts\Auth\Middleware\AuthenticatesRequests::class, prepend: \App\Http\Middleware\Impersonate::class);
         $middleware->redirectGuestsTo('/login');
         $middleware->redirectUsersTo('/');
     })

@@ -8,7 +8,9 @@ use App\Http\Controllers\ClientController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DocumentLogController;
 use App\Http\Controllers\EmployeeController;
+use App\Http\Controllers\BrandingController;
 use App\Http\Controllers\EmployeeLeaveController;
+use App\Http\Controllers\EmployeeLoginController;
 use App\Http\Controllers\EmployeeSalaryController;
 use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\ExpenseHeadController;
@@ -35,6 +37,11 @@ Route::middleware('guest')->group(function () {
     Route::post('/login', [LoginController::class, 'login'])->middleware('throttle:10,1');
 });
 Route::post('/logout', [LoginController::class, 'logout'])->middleware('auth')->name('logout');
+
+// Logo, sidebar icon and favicon (uploaded in Settings › Branding); the login page needs them too.
+Route::get('/branding/{asset}', [BrandingController::class, 'show'])->name('branding.show')->whereIn('asset', ['logo', 'icon', 'favicon']);
+// Shown in a "Log in as" tab once it has ended.
+Route::get('/impersonation/ended', [EmployeeLoginController::class, 'ended'])->name('impersonation.ended');
 
 Route::middleware('auth')->group(function () {
     /*
@@ -148,6 +155,11 @@ Route::middleware('auth')->group(function () {
     Route::get('/employees/{employee}', [EmployeeController::class, 'show'])->name('employees.show');
     Route::get('/employees/{employee}/photo', [EmployeeController::class, 'photo'])->name('employees.photo');
     Route::post('/employees/{employee}/photo', [EmployeeController::class, 'updatePhoto'])->name('employees.photo.update');
+    Route::middleware('can:users.impersonate')->group(function () {
+        Route::put('/employees/{employee}/password', [EmployeeLoginController::class, 'password'])->name('employees.password');
+        Route::post('/employees/{employee}/login-as', [EmployeeLoginController::class, 'start'])->name('employees.impersonate');
+    });
+    Route::post('/impersonation/end', [EmployeeLoginController::class, 'end'])->name('impersonation.end');
     Route::post('/employees/{employee}/salaries', [EmployeeSalaryController::class, 'store'])->name('salaries.store')->middleware('can:employees.salary');
 
     /*
@@ -172,6 +184,11 @@ Route::middleware('auth')->group(function () {
         Route::middleware('can:access.manage')->group(function () {
             Route::get('/access', [AccessController::class, 'edit'])->name('access.edit');
             Route::put('/access', [AccessController::class, 'update'])->name('access.update');
+        });
+        Route::middleware('can:settings.branding')->group(function () {
+            Route::get('/branding', [BrandingController::class, 'edit'])->name('branding.edit');
+            Route::post('/branding', [BrandingController::class, 'update'])->name('branding.update');
+            Route::delete('/branding/{asset}', [BrandingController::class, 'destroy'])->name('branding.destroy')->whereIn('asset', ['logo', 'icon', 'favicon']);
         });
         Route::middleware('can:settings.manage')->group(function () {
             Route::post('/expense-heads', [ExpenseHeadController::class, 'store'])->name('expense-heads.store');

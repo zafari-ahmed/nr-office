@@ -26,7 +26,13 @@
                 <p class="text-muted">{{ $employee->designation }}{{ $employee->department ? ' · '.$employee->department : '' }} · {{ $employee->employee_code }}</p>
             </div>
         </div>
-        <div class="flex gap-2">
+        <div class="flex flex-wrap gap-2">
+            @if ($canManageLogin && $employee->user->is_active && ! $employee->user->isAdmin() && ! $employee->user->is(auth()->user()))
+                <form method="POST" action="{{ route('employees.impersonate', $employee) }}" target="_blank">
+                    @csrf
+                    <button class="btn btn-secondary" title="Opens a new tab signed in as {{ $employee->user->name }}. Your other tabs stay signed in as you."><x-icon name="log-in" /> Log in as {{ \Illuminate\Support\Str::before($employee->full_name, ' ') ?: $employee->full_name }}</button>
+                </form>
+            @endif
             @can('employees.manage')
                 <button class="btn btn-secondary" @click="$store.drawer.open('leave')"><x-icon name="calendar-days" /> Record leave</button>
                 <a href="{{ route('employees.edit', $employee) }}" class="btn btn-secondary"><x-icon name="pencil" /> Edit</a>
@@ -185,6 +191,43 @@
                         <div class="sm:col-span-2"><dt class="text-xs text-muted">Address</dt><dd>{{ $employee->address ?: '—' }}</dd></div>
                     </dl>
                 </div>
+                <div class="space-y-6">
+                @if ($canManageLogin)
+                    @php($login = $employee->user)
+                    <div class="card">
+                        <div class="flex items-center justify-between gap-2 px-5 pt-5 pb-3">
+                            <h2 class="card-title">App login</h2>
+                            <x-pill :status="$login->is_active ? 'active' : 'cancelled'" :label="$login->is_active ? 'Can sign in' : 'Login off'" />
+                        </div>
+                        <dl class="px-5 pb-4 space-y-2 text-[13px]">
+                            <div class="flex justify-between gap-3"><dt class="text-muted">Sign-in</dt><dd class="font-medium text-right truncate">{{ $login->username ? '@'.$login->username.' · ' : '' }}{{ $login->email }}</dd></div>
+                            <div class="flex justify-between gap-3"><dt class="text-muted">Role</dt><dd class="font-medium">{{ \App\Models\User::ROLES[$login->role] ?? $login->role }}</dd></div>
+                            <div class="flex justify-between gap-3"><dt class="text-muted">Last sign-in</dt><dd>{{ $login->last_login_at?->diffForHumans() ?? 'Never' }}</dd></div>
+                        </dl>
+                        @unless ($login->is(auth()->user()))
+                            <div class="flex flex-wrap gap-2 px-5 pb-5">
+                                <button type="button" class="btn btn-secondary btn-sm" @click="$store.drawer.open('login-password')"><x-icon name="key-round" /> Change password</button>
+                                @if ($login->is_active && ! $login->isAdmin())
+                                    <form method="POST" action="{{ route('employees.impersonate', $employee) }}" target="_blank">
+                                        @csrf
+                                        <button class="btn btn-secondary btn-sm"><x-icon name="log-in" /> Log in as {{ $login->name }}</button>
+                                    </form>
+                                @endif
+                            </div>
+                            @if ($login->is_active && ! $login->isAdmin())
+                                <p class="px-5 pb-4 -mt-2 text-[12px] text-muted">"Log in as" opens a new tab where you see the app exactly as {{ $login->name }} does. Your other tabs stay signed in as you; close the tab or press End to stop.</p>
+                            @endif
+                        @endunless
+                        @if ($loginSessions->isNotEmpty())
+                            <div class="border-t border-line px-5 py-3">
+                                <div class="text-[12px] font-medium text-muted mb-1.5">Recent "log in as"</div>
+                                @foreach ($loginSessions as $ls)
+                                    <div class="text-[12.5px] py-0.5"><span class="font-medium">{{ $ls->impersonator?->name }}</span> <span class="text-muted">· {{ $ls->started_at->format('d M, h:i A') }} · {{ $ls->ended_at ? (\App\Models\Impersonation::END_REASONS[$ls->end_reason] ?? 'Ended').' after '.$ls->started_at->diffForHumans($ls->ended_at, true) : 'Open' }}</span></div>
+                                @endforeach
+                            </div>
+                        @endif
+                    </div>
+                @endif
                 <div class="card">
                     <div class="px-5 pt-5 pb-2 card-title">Leaves</div>
                     @forelse ($employee->leaves as $l)
@@ -198,6 +241,7 @@
                     @empty
                         <p class="px-5 pb-5 text-[13px] text-muted">No leaves recorded.</p>
                     @endforelse
+                </div>
                 </div>
             </div>
     @endswitch
@@ -219,5 +263,20 @@
                 <button form="leave-form" class="btn btn-primary">Save</button>
             </x-slot:footer>
         </x-drawer>
+        @if ($canManageLogin && ! $employee->user->is(auth()->user()))
+            <x-drawer name="login-password" title="Change password" :subtitle="$employee->user->name">
+                <form id="login-password-form" method="POST" action="{{ route('employees.password', $employee) }}" class="space-y-4">
+                    @csrf @method('PUT')
+                    <input type="hidden" name="_drawer" value="login-password">
+                    <p class="text-[13px] text-muted">Sets a new password for {{ $employee->user->email }}. Tell {{ $employee->user->name }} the new password; the old one stops working.</p>
+                    <x-field label="New password" name="password" type="password" required autocomplete="new-password" minlength="8" />
+                    <x-field label="Confirm new password" name="password_confirmation" type="password" required autocomplete="new-password" minlength="8" />
+                </form>
+                <x-slot:footer>
+                    <button type="button" class="btn btn-secondary" @click="$store.drawer.close()">Cancel</button>
+                    <button form="login-password-form" class="btn btn-primary">Change password</button>
+                </x-slot:footer>
+            </x-drawer>
+        @endif
     </x-slot:drawers>
 </x-layouts.app>
