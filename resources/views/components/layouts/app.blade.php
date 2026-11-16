@@ -10,6 +10,7 @@
         ['Inventory', 'inventory.index', 'package', ['inventory.*'], 0, '', 'inventory.view'],
         ['Employees', 'employees.index', 'users', ['employees.*'], 0, '', 'employees.view'],
         ['Site Rotation', 'rotation.index', 'calendar-range', ['rotation.*'], $shellOverdueVisits ?? 0, 'red', 'rotation.view'],
+        ['Documents', 'documents.index', 'file-signature', ['documents.*'], 0, '', 'documents.manage'],
         ['Reports', 'reports.index', 'bar-chart-3', ['reports.*'], 0, '', 'reports.view'],
     ])->filter(fn ($item) => \App\Support\Modules::enabled((string) \App\Support\Modules::forRoute($item[1])) && (! $item[6] || $user->hasPermission($item[6])))->values();
     $canSettings = collect(array_keys(\App\Http\Controllers\SettingsController::SECTIONS))->contains(fn ($s) => \App\Http\Controllers\SettingsController::allowed($user, $s));
@@ -21,7 +22,8 @@
         ['Expense', 'wallet', 'drawer:expense', null],
         ['Follow-up', 'phone-call', 'drawer:follow-up', null],
         ['Log sent document', 'mail', 'drawer:log-document', 'quotations.manage'],
-    ])->filter(fn ($item) => \App\Support\Modules::enabled(match ($item[0]) { 'Expense' => 'expenses', 'Follow-up' => 'projects', default => '' }) && (! $item[3] || $user->hasPermission($item[3])))->values();
+        ['Letterhead document', 'file-signature', route('documents.index'), 'documents.manage'],
+    ])->filter(fn ($item) => \App\Support\Modules::enabled(match ($item[0]) { 'Expense' => 'expenses', 'Follow-up' => 'projects', 'Letterhead document' => 'documents', default => '' }) && (! $item[3] || $user->hasPermission($item[3])))->values();
 @endphp
 <!DOCTYPE html>
 <html lang="en">

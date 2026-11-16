@@ -42,9 +42,12 @@ class Access
             'rotation.view' => ['See site rotation', 'Who is on site and the rotation schedule.'],
             'rotation.manage' => ['Schedule and edit visits', 'Schedule, edit, extend, end and cancel site visits.'],
         ],
+        'Documents' => [
+            'documents.manage' => ['Make letterhead documents', 'Write documents on the letterhead from templates, print and reprint them, and see the print history.'],
+        ],
         'Reports & settings' => [
             'reports.view' => ['See reports', 'All reports and CSV export.'],
-            'settings.manage' => ['Change settings', 'Company profile, rotation rules, notifications, expense heads, numbering and taxes.'],
+            'settings.manage' => ['Change settings', 'Company profile, rotation rules, notifications, expense heads, numbering, taxes, letterhead and document templates.'],
             'users.manage' => ['Manage users', 'Add users, change roles and deactivate accounts.'],
         ],
     ];
@@ -64,11 +67,11 @@ class Access
         'manager' => [
             'dashboard.finance', 'projects.view_all', 'projects.manage', 'projects.delete', 'quotations.view', 'quotations.manage',
             'invoices.view', 'invoices.manage', 'expenses.view_all', 'expenses.approve', 'inventory.view', 'inventory.manage',
-            'employees.view', 'employees.manage', 'rotation.view', 'rotation.manage', 'reports.view', 'settings.manage',
+            'employees.view', 'employees.manage', 'rotation.view', 'rotation.manage', 'reports.view', 'settings.manage', 'documents.manage',
         ],
         'accounts' => [
             'dashboard.finance', 'projects.view_all', 'quotations.view', 'invoices.view', 'invoices.manage', 'expenses.view_all',
-            'expenses.approve', 'inventory.view', 'employees.view', 'rotation.view', 'reports.view',
+            'expenses.approve', 'inventory.view', 'employees.view', 'rotation.view', 'reports.view', 'documents.manage',
         ],
         // Staff log in to see projects, add updates and their own expenses, and check the site rotation.
         'staff' => ['projects.view_all', 'rotation.view'],

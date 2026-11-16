@@ -14,7 +14,8 @@ use Symfony\Component\HtmlSanitizer\HtmlSanitizerConfig;
  */
 class RichText
 {
-    public static function clean(?string $html): string
+    /** $aligned also keeps text alignment (left/center/right/justify), used by letterhead documents. */
+    public static function clean(?string $html, bool $aligned = false): string
     {
         $config = (new HtmlSanitizerConfig)
             ->defaultAction(HtmlSanitizerAction::Block) // unknown tags are unwrapped, their text kept
@@ -27,8 +28,18 @@ class RichText
             $config = $config->allowElement($tag);
         }
         $config = $config->allowElement('a', ['href'])->allowElement('th', ['colspan', 'rowspan'])->allowElement('td', ['colspan', 'rowspan']);
+        if ($aligned) {
+            foreach (['p', 'h1', 'h2', 'h3', 'h4'] as $tag) {
+                $config = $config->allowElement($tag, ['style']);
+            }
+            $config = $config->allowElement('th', ['colspan', 'rowspan', 'style'])->allowElement('td', ['colspan', 'rowspan', 'style']);
+        }
+        $clean = trim((new HtmlSanitizer($config))->sanitize((string) $html));
 
-        return trim((new HtmlSanitizer($config))->sanitize((string) $html));
+        // Of any inline style, keep only the text alignment.
+        return $aligned ? preg_replace_callback('/ style="([^"]*)"/', function ($m) {
+            return preg_match('/text-align:\s*(left|center|right|justify)/i', html_entity_decode($m[1]), $a) ? ' style="text-align: '.strtolower($a[1]).'"' : '';
+        }, $clean) : $clean;
     }
 
     /** True when the stored value has no visible text (e.g. "<p></p>"). */

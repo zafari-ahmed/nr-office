@@ -6,7 +6,9 @@ use App\Http\Controllers\AttachmentController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\ClientController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\DocumentLogController;
+use App\Http\Controllers\DocumentTemplateController;
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\BrandingController;
 use App\Http\Controllers\EmployeeLeaveController;
@@ -17,6 +19,7 @@ use App\Http\Controllers\ExpenseHeadController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\InvoicePaymentController;
+use App\Http\Controllers\LetterheadController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ProjectFollowUpController;
@@ -176,6 +179,18 @@ Route::middleware('auth')->group(function () {
     });
 
     /*
+    | M11 Letterhead documents (letterheads and templates are set up in Settings › Letterhead & templates)
+    */
+    Route::get('/letterheads/{letterhead}/image/{part}', [LetterheadController::class, 'image'])->name('letterheads.image')->whereIn('part', ['header', 'footer']);
+    Route::middleware('can:documents.manage')->group(function () {
+        Route::resource('documents', DocumentController::class);
+        Route::get('/documents/{document}/print', [DocumentController::class, 'print'])->name('documents.print');
+        Route::post('/documents/{document}/duplicate', [DocumentController::class, 'duplicate'])->name('documents.duplicate');
+        Route::post('/documents/{document}/prints', [DocumentController::class, 'logPrint'])->name('documents.prints.store');
+        Route::get('/document-prints/{print}', [DocumentController::class, 'showPrint'])->name('document-prints.show');
+    });
+
+    /*
     | M10 Settings
     */
     Route::prefix('settings')->name('settings.')->group(function () {
@@ -193,6 +208,11 @@ Route::middleware('auth')->group(function () {
         Route::middleware('can:settings.manage')->group(function () {
             Route::post('/expense-heads', [ExpenseHeadController::class, 'store'])->name('expense-heads.store');
             Route::put('/expense-heads/{expenseHead}', [ExpenseHeadController::class, 'update'])->name('expense-heads.update');
+            Route::resource('letterheads', LetterheadController::class)->except('show');
+            Route::patch('/letterheads/{letterhead}/default', [LetterheadController::class, 'makeDefault'])->name('letterheads.default');
+            Route::get('/letterheads/{letterhead}/source', [LetterheadController::class, 'source'])->name('letterheads.source');
+            Route::resource('templates', DocumentTemplateController::class)->except(['index', 'show']);
+            Route::get('/templates/{template}/sample', [DocumentTemplateController::class, 'sample'])->name('templates.sample');
             Route::get('/{section}', [SettingsController::class, 'show'])->name('show');
             Route::put('/{section}', [SettingsController::class, 'update'])->name('update');
         });

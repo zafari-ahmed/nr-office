@@ -20,6 +20,7 @@ class SettingsController extends Controller
         'expense-heads' => ['Expense heads & budgets', 'wallet'],
         'numbering' => ['Numbering', 'hash'],
         'finance' => ['Taxes & currency', 'percent'],
+        'letterheads' => ['Letterhead & templates', 'stamp'],
     ];
 
     private const RULES = [
@@ -32,6 +33,7 @@ class SettingsController extends Controller
             'module.employees' => ['required', 'boolean'],
             'module.rotation' => ['required', 'boolean'],
             'module.reports' => ['required', 'boolean'],
+            'module.documents' => ['sometimes', 'boolean'],
         ],
         'company' => [
             'company.name' => ['required', 'string', 'max:255'],
@@ -87,6 +89,9 @@ class SettingsController extends Controller
         if (in_array($section, ['modules', 'branding'], true)) {
             return $user->isAdmin();
         }
+        if ($section === 'letterheads' && ! \App\Support\Modules::enabled('documents')) {
+            return false;
+        }
 
         return $user->hasPermission(match ($section) { 'users' => 'users.manage', 'access' => 'access.manage', default => 'settings.manage' })
             || ($section === 'access' && $user->isAdmin());
@@ -94,7 +99,7 @@ class SettingsController extends Controller
 
     public static function url(string $section): string
     {
-        return match ($section) { 'users' => route('settings.users.index'), 'access' => route('settings.access.edit'), 'branding' => route('settings.branding.edit'), default => route('settings.show', $section) };
+        return match ($section) { 'users' => route('settings.users.index'), 'access' => route('settings.access.edit'), 'branding' => route('settings.branding.edit'), 'letterheads' => route('settings.letterheads.index'), default => route('settings.show', $section) };
     }
 
     public function home(Request $request)
@@ -107,7 +112,7 @@ class SettingsController extends Controller
 
     public function show(string $section)
     {
-        if (in_array($section, ['users', 'access', 'branding'], true)) {
+        if (in_array($section, ['users', 'access', 'branding', 'letterheads'], true)) {
             return redirect(self::url($section));
         }
         abort_unless(array_key_exists($section, self::SECTIONS), 404);
@@ -130,7 +135,7 @@ class SettingsController extends Controller
         $request->validate(self::RULES[$section]);
 
         foreach (array_keys(self::RULES[$section]) as $key) {
-            if (str_contains($key, '*')) {
+            if (str_contains($key, '*') || (in_array('sometimes', self::RULES[$section][$key], true) && ! $request->has($key))) {
                 continue;
             }
             $value = $request->input($key);

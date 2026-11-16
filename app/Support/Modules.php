@@ -20,6 +20,7 @@ class Modules
         'inventory' => ['Inventory', 'package', 'Assets, consumables and stock.', ['inventory.*']],
         'employees' => ['Employees', 'users', 'Employee directory, leaves and salaries.', ['employees.*', 'leaves.*', 'salaries.*']],
         'rotation' => ['Site Rotation', 'calendar-range', 'Site visits and return reminders.', ['rotation.*']],
+        'documents' => ['Documents', 'file-signature', 'Letterhead documents from templates, with print history.', ['documents.*', 'document-prints.*', 'letterheads.*', 'settings.letterheads.*', 'settings.templates.*']],
         'reports' => ['Reports', 'bar-chart-3', 'Reports and exports.', ['reports.*']],
     ];
 

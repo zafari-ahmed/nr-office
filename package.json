@@ -23,10 +23,16 @@
         "@tiptap/extension-table-cell": "^2.27.3",
         "@tiptap/extension-table-header": "^2.27.3",
         "@tiptap/extension-table-row": "^2.27.3",
+        "@tiptap/extension-text-align": "^2.27.3",
         "@tiptap/extension-underline": "^2.27.3",
         "@tiptap/starter-kit": "^2.27.3",
         "alpinejs": "^3.17.4",
         "chart.js": "^4.5.1",
-        "lucide": "^0.460.0"
+        "docx-preview": "^0.3.5",
+        "html2canvas": "^1.4.1",
+        "jszip": "^3.10.1",
+        "lucide": "^0.460.0",
+        "mammoth": "^1.8.0",
+        "pdfjs-dist": "^4.10.38"
     }
 }

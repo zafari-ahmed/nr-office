@@ -2,6 +2,7 @@ import './bootstrap';
 import Alpine from 'alpinejs';
 import { lineItems } from './line-items';
 import { richEditor } from './rich-editor';
+import { letterheadCutter, templateImport } from './letterhead';
 import { renderCharts } from './charts';
 import { renderIcons } from './icons';
 
@@ -31,6 +32,10 @@ Alpine.store('drawer', {
 
 /* Rich text notes. */
 Alpine.data('richEditor', richEditor);
+
+/* Letterhead documents: cut header/footer from an upload, import an old document as a template. */
+Alpine.data('letterheadCutter', letterheadCutter);
+Alpine.data('templateImport', templateImport);
 
 /* Toasts. */
 Alpine.store('toasts', {

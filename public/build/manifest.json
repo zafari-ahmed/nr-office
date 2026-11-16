@@ -1,6 +1,45 @@
 {
+  "__commonjs-dynamic-modules-B9lKsKkd.js": {
+    "file": "assets/_commonjs-dynamic-modules-B9lKsKkd.js",
+    "name": "_commonjs-dynamic-modules"
+  },
+  "_mammoth.browser-COjuzArL.js": {
+    "file": "assets/mammoth.browser-COjuzArL.js",
+    "name": "mammoth.browser",
+    "isDynamicEntry": true,
+    "imports": [
+      "__commonjs-dynamic-modules-B9lKsKkd.js"
+    ]
+  },
+  "node_modules/docx-preview/dist/docx-preview.mjs": {
+    "file": "assets/docx-preview-D8itMpJz.js",
+    "name": "docx-preview",
+    "src": "node_modules/docx-preview/dist/docx-preview.mjs",
+    "isDynamicEntry": true,
+    "imports": [
+      "__commonjs-dynamic-modules-B9lKsKkd.js"
+    ]
+  },
+  "node_modules/html2canvas/dist/html2canvas.esm.js": {
+    "file": "assets/html2canvas.esm-DXEQVQnt.js",
+    "name": "html2canvas.esm",
+    "src": "node_modules/html2canvas/dist/html2canvas.esm.js",
+    "isDynamicEntry": true
+  },
+  "node_modules/pdfjs-dist/legacy/build/pdf.mjs": {
+    "file": "assets/pdf-z6sF223D.js",
+    "name": "pdf",
+    "src": "node_modules/pdfjs-dist/legacy/build/pdf.mjs",
+    "isDynamicEntry": true
+  },
+  "node_modules/pdfjs-dist/legacy/build/pdf.worker.min.mjs?worker&url": {
+    "file": "assets/pdf.worker.min-Da4RFmaZ.js",
+    "name": "pdf.worker.min",
+    "src": "node_modules/pdfjs-dist/legacy/build/pdf.worker.min.mjs?worker&url",
+    "isDynamicEntry": true
+  },
   "resources/css/app.css": {
-    "file": "assets/app-DSZzeaiu.css",
+    "file": "assets/app-CT7vl7Nb.css",
     "src": "resources/css/app.css",
     "isEntry": true,
     "name": "app",
@@ -9,9 +48,16 @@
     ]
   },
   "resources/js/app.js": {
-    "file": "assets/app-DKI7ZYPv.js",
+    "file": "assets/app-DIbS0CJC.js",
     "name": "app",
     "src": "resources/js/app.js",
-    "isEntry": true
+    "isEntry": true,
+    "dynamicImports": [
+      "node_modules/pdfjs-dist/legacy/build/pdf.mjs",
+      "node_modules/pdfjs-dist/legacy/build/pdf.worker.min.mjs?worker&url",
+      "node_modules/docx-preview/dist/docx-preview.mjs",
+      "node_modules/html2canvas/dist/html2canvas.esm.js",
+      "_mammoth.browser-COjuzArL.js"
+    ]
   }
 }
