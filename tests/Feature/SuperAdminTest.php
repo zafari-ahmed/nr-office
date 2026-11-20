@@ -70,21 +70,37 @@ class SuperAdminTest extends TestCase
         $this->get(route('settings.users.edit', $other))->assertForbidden();
     }
 
-    public function test_salary_is_only_for_super_admins_and_accounts(): void
+    public function test_salary_is_only_for_super_admins(): void
     {
         $employee = $this->staff->employee_id;
-
-        $this->actingAs($this->accounts)->get("/employees/{$employee}")->assertOk()->assertSee('Salary history');
-        $this->get("/employees/{$employee}?tab=salary")->assertOk()->assertSee('Salary revisions');
-        $this->post("/employees/{$employee}/salaries", ['effective_from' => today()->toDateString(), 'basic_salary' => 90000])->assertRedirect();
-        $this->asGuest();
-        // Even if a manager was given the old right, salaries stay hidden from them.
+        // Nobody but a Super admin, even a role that was given the old right.
+        Setting::put('access.accounts', implode(',', [...\App\Support\Access::DEFAULTS['accounts'], 'employees.salary']));
         Setting::put('access.manager', implode(',', [...\App\Support\Access::DEFAULTS['manager'], 'employees.salary']));
-        $this->actingAs($this->manager)->get("/employees/{$employee}")->assertOk()->assertDontSee('Salary history');
-        $this->get("/employees/{$employee}?tab=salary")->assertOk()->assertDontSee('Salary revisions');
-        $this->post("/employees/{$employee}/salaries", ['effective_from' => today()->toDateString(), 'basic_salary' => 1])->assertForbidden();
+
+        foreach ([$this->accounts, $this->manager] as $user) {
+            $this->actingAs($user)->get("/employees/{$employee}")->assertOk()->assertDontSee('Salary history');
+            $this->get("/employees/{$employee}?tab=salary")->assertOk()->assertDontSee('Salary revisions');
+            $this->post("/employees/{$employee}/salaries", ['effective_from' => today()->toDateString(), 'basic_salary' => 1])->assertForbidden();
+            $this->asGuest();
+        }
+        // Not even their own salary.
+        $this->actingAs($this->staff)->get("/employees/{$employee}?tab=salary")->assertOk()->assertDontSee('Salary revisions');
+        $this->get('/')->assertOk()->assertDontSee(number_format((float) $this->staff->employee->basic_salary, 0, '.', ''));
         $this->asGuest();
-        $this->actingAs($this->admin)->get("/employees/{$employee}?tab=salary")->assertOk()->assertSee('Salary revisions')->assertSee('Revise salary');
+
+        // A manager adding an employee can't set the salary.
+        $this->actingAs($this->manager)->get('/employees/create')->assertOk()->assertDontSee('Basic salary');
+        $this->post('/employees', ['full_name' => 'New Hire', 'employment_type' => 'permanent', 'status' => 'active', 'basic_salary' => 50000])->assertRedirect();
+        $hire = \App\Models\Employee::where('full_name', 'New Hire')->first();
+        $this->assertEquals(0, (float) $hire->basic_salary);
+        $this->assertSame(0, $hire->salaries()->count());
+        $this->asGuest();
+
+        // The Super admin sees the tab with amounts hidden behind the eye, and can add a revision.
+        $page = $this->actingAs($this->admin)->get("/employees/{$employee}?tab=salary")->assertOk();
+        $page->assertSee('Salary revisions')->assertSee('Show amounts')->assertSee('x-data="{ show: false }"', false)->assertSee('Add salary revision');
+        $this->post("/employees/{$employee}/salaries", ['effective_from' => today()->toDateString(), 'basic_salary' => 120000, 'allowances' => 0, 'deductions' => 0, 'reason' => 'Increment'])->assertRedirect();
+        $this->assertEquals(120000, (float) $this->staff->employee->fresh()->basic_salary);
         $this->get('/settings/access')->assertOk()->assertSee('Super admin only')->assertDontSee('See and change salaries');
     }
 

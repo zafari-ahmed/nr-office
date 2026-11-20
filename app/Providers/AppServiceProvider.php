@@ -52,8 +52,8 @@ class AppServiceProvider extends ServiceProvider
                 'quickHeads' => ExpenseHead::where('is_active', true)->orderBy('sort_order')->get(['id', 'name', 'slug', 'links_project']),
                 'quickEmployees' => Employee::active()->when(! $user->hasPermission('employees.view'), fn ($q) => $q->whereKey($user->employee_id))
                     ->orderBy('full_name')->get(['id', 'full_name', 'basic_salary'])
-                    // Salaries only reach the page for people allowed to see them (used to fill the amount).
-                    ->each(fn ($e) => $user->hasPermission('employees.salary') || $e->id === $user->employee_id ?: $e->setAttribute('basic_salary', null)),
+                    // Salaries only reach the page for Super admins (used to fill the amount).
+                    ->each(fn ($e) => $user->hasPermission('employees.salary') ?: $e->setAttribute('basic_salary', null)),
                 'quickUsers' => User::where('is_active', true)->orderBy('name')->get(['id', 'name']),
             ]);
         });

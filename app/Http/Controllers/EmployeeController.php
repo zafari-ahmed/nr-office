@@ -253,7 +253,8 @@ class EmployeeController extends Controller
         ], ['cnic.regex' => 'CNIC must look like 35202-1234567-1.', 'photo.max' => 'The photo must be 4 MB or smaller.']);
 
         $data['is_site_staff'] = $request->boolean('is_site_staff');
-        $data['basic_salary'] ??= 0;
+        // Only Super admins set salaries.
+        $data['basic_salary'] = $request->user()->hasPermission('employees.salary') ? ($data['basic_salary'] ?? 0) : 0;
         $data['login'] = $this->validatedLogin($request, $employee);
 
         return $data;

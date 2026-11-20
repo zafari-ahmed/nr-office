@@ -26,9 +26,9 @@
                 </table>
             </div>
             <div class="card card-pad text-[13px] grid sm:grid-cols-2 gap-3">
-                <div><span class="font-medium">Super admin</span> <span class="text-muted">· everything; only Super admins see other Super admins and branding, and can log in as an employee</span></div>
+                <div><span class="font-medium">Super admin</span> <span class="text-muted">· everything; only Super admins see salaries, other Super admins and branding, and can log in as an employee</span></div>
                 <div><span class="font-medium">Manager</span> <span class="text-muted">· projects, quotes, rotation, settings, approvals</span></div>
-                <div><span class="font-medium">Accounts</span> <span class="text-muted">· invoices, payments, expenses and salaries</span></div>
+                <div><span class="font-medium">Accounts</span> <span class="text-muted">· invoices, payments and expenses</span></div>
                 <div><span class="font-medium">Staff</span> <span class="text-muted">· projects, follow-ups, logs; expenses need approval</span></div>
             </div>
         </div>

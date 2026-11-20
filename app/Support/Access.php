@@ -52,8 +52,8 @@ class Access
         ],
     ];
 
-    /** Salaries: fixed to these roles, not set on the Access rights screen. */
-    public const SALARY_ROLES = ['admin', 'accounts'];
+    /** Salaries (tab, history, amounts): fixed to these roles, not set on the Access rights screen. */
+    public const SALARY_ROLES = ['admin'];
 
     /** Rights only a Super admin has; they can't be given to other roles. */
     public const SUPER_ADMIN_ONLY = [

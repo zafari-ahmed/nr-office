@@ -73,12 +73,13 @@
                 @error('photo')<p class="error mt-2">{{ $message }}</p>@enderror
             </div>
             <div class="card card-pad space-y-4">
-                <h2 class="card-title">Salary & bank</h2>
-                @unless ($employee->exists)
+                <h2 class="card-title">{{ auth()->user()->hasPermission('employees.salary') ? 'Salary & bank' : 'Bank' }}</h2>
+                @if (! auth()->user()->hasPermission('employees.salary'))
+                @elseif (! $employee->exists)
                     <x-field label="Basic salary (PKR)" name="basic_salary" type="number" step="0.01" min="0" :value="$employee->basic_salary" />
                 @else
                     <p class="text-xs text-muted">Change salary from the profile's Salary history tab so revisions are kept.</p>
-                @endunless
+                @endif
                 <x-field label="Bank" name="bank_name" :value="$employee->bank_name" placeholder="Meezan Bank" />
                 <x-field label="Account / IBAN" name="bank_account_no" :value="$employee->bank_account_no" />
             </div>

@@ -70,7 +70,7 @@ class User extends Authenticatable
             return false;
         }
 
-        // Salary tab and history: Super admin and Accounts only.
+        // Salary tab, history and amounts: Super admin only.
         if ($permission === 'employees.salary') {
             return in_array($this->role, \App\Support\Access::SALARY_ROLES, true);
         }

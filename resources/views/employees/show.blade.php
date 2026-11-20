@@ -53,6 +53,15 @@
     @switch($tab)
         @case('salary')
             @if ($canSeeSalary)
+                {{-- Amounts stay hidden until the eye is pressed (not remembered: hidden again on every visit). --}}
+                <div x-data="{ show: false }" class="space-y-4">
+                <div class="flex items-center justify-between gap-3">
+                    <p class="text-[13px] text-muted"><x-icon name="lock" class="!size-3.5 inline -mt-0.5" /> Only Super admins can see this tab.</p>
+                    <button type="button" class="btn btn-secondary btn-sm" @click="show = !show" :aria-pressed="show">
+                        <span x-show="!show" class="inline-flex items-center gap-1.5"><x-icon name="eye" /> Show amounts</span>
+                        <span x-show="show" x-cloak class="inline-flex items-center gap-1.5"><x-icon name="eye-off" /> Hide amounts</span>
+                    </button>
+                </div>
                 <div class="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6">
                     <div class="space-y-6">
                         <div class="card overflow-x-auto">
@@ -61,7 +70,7 @@
                                 <thead><tr><th>Effective</th><th class="text-right">Basic</th><th class="text-right">Allowances</th><th class="text-right">Deductions</th><th class="text-right">Net</th><th>Reason</th></tr></thead>
                                 <tbody>
                                 @forelse ($employee->salaries as $s)
-                                    <tr><td>{{ $s->effective_from->format('d M Y') }}</td><td class="text-right tabular-nums">{{ money($s->basic_salary) }}</td><td class="text-right tabular-nums">{{ money($s->allowances) }}</td><td class="text-right tabular-nums">{{ money($s->deductions) }}</td><td class="text-right tabular-nums font-medium">{{ money($s->net_salary) }}</td><td class="text-muted">{{ $s->reason }}</td></tr>
+                                    <tr><td>{{ $s->effective_from->format('d M Y') }}</td><td class="text-right tabular-nums"><span x-show="show" x-cloak>{{ money($s->basic_salary) }}</span><span x-show="!show" class="text-muted tracking-widest">••••••</span></td><td class="text-right tabular-nums"><span x-show="show" x-cloak>{{ money($s->allowances) }}</span><span x-show="!show" class="text-muted tracking-widest">••••••</span></td><td class="text-right tabular-nums"><span x-show="show" x-cloak>{{ money($s->deductions) }}</span><span x-show="!show" class="text-muted tracking-widest">••••••</span></td><td class="text-right tabular-nums font-medium"><span x-show="show" x-cloak>{{ money($s->net_salary) }}</span><span x-show="!show" class="text-muted tracking-widest">••••••</span></td><td class="text-muted">{{ $s->reason }}</td></tr>
                                 @empty
                                     <tr><td colspan="6"><x-empty icon="banknote" title="No salary records" /></td></tr>
                                 @endforelse
@@ -74,7 +83,7 @@
                                 <thead><tr><th>Paid on</th><th>Month</th><th>Status</th><th class="text-right">Amount</th></tr></thead>
                                 <tbody>
                                 @forelse ($employee->salaryExpenses as $p)
-                                    <tr><td>{{ $p->expense_date->format('d M Y') }}</td><td>{{ $p->payroll_month?->format('M Y') ?? '—' }}</td><td><x-pill :status="$p->status" /></td><td class="text-right tabular-nums">{{ money($p->amount) }}</td></tr>
+                                    <tr><td>{{ $p->expense_date->format('d M Y') }}</td><td>{{ $p->payroll_month?->format('M Y') ?? '—' }}</td><td><x-pill :status="$p->status" /></td><td class="text-right tabular-nums"><span x-show="show" x-cloak>{{ money($p->amount) }}</span><span x-show="!show" class="text-muted tracking-widest">••••••</span></td></tr>
                                 @empty
                                     <tr><td colspan="4"><x-empty icon="wallet" title="No payments yet" text="Record salary under Expenses with this employee selected." /></td></tr>
                                 @endforelse
@@ -84,9 +93,9 @@
                     </div>
                     <form method="POST" action="{{ route('salaries.store', $employee) }}" class="card card-pad space-y-4 self-start">
                         @csrf
-                        <h2 class="card-title">Revise salary</h2>
+                        <h2 class="card-title">Add salary revision</h2>
                         <x-field label="Effective from" name="effective_from" type="date" :value="today()->startOfMonth()->format('Y-m-d')" required />
-                        <x-field label="Basic (PKR)" name="basic_salary" type="number" step="0.01" min="0" :value="$employee->basic_salary" required />
+                        <x-field label="Basic (PKR)" name="basic_salary" type="number" step="0.01" min="0" :value="$employee->basic_salary" required x-bind:type="show ? 'number' : 'password'" />
                         <div class="grid grid-cols-2 gap-3">
                             <x-field label="Allowances" name="allowances" type="number" step="0.01" min="0" value="0" />
                             <x-field label="Deductions" name="deductions" type="number" step="0.01" min="0" value="0" />
@@ -94,6 +103,7 @@
                         <x-field label="Reason" name="reason" placeholder="Annual increment" />
                         <button class="btn btn-primary w-full">Save revision</button>
                     </form>
+                </div>
                 </div>
             @endif
             @break

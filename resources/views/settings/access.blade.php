@@ -6,7 +6,7 @@
             @csrf @method('PUT')
             <div class="px-5 py-4 border-b border-line">
                 <h2 class="card-title">Access rights</h2>
-                <p class="text-[13px] text-ink-2 mt-0.5">Choose what each role can see and do. Super admin always has full access. Salaries are seen only by Super admin and Accounts. Everyone can open their own profile, add their own expenses and see projects they manage or are on the team of.</p>
+                <p class="text-[13px] text-ink-2 mt-0.5">Choose what each role can see and do. Super admin always has full access. Only Super admins see and add salaries. Everyone can open their own profile, add their own expenses and see projects they manage or are on the team of.</p>
             </div>
             <div class="overflow-x-auto">
                 <table class="table">
