@@ -104,6 +104,27 @@ class SuperAdminTest extends TestCase
         $this->get('/settings/access')->assertOk()->assertSee('Super admin only')->assertDontSee('See and change salaries');
     }
 
+    public function test_super_admin_deletes_a_salary_revision(): void
+    {
+        $employee = $this->staff->employee;
+        $employee->salaries()->delete(); // the seeded joining salary has a random date
+        $old = $employee->salaries()->create(['effective_from' => today()->subYear(), 'basic_salary' => 80000, 'allowances' => 0, 'deductions' => 0, 'net_salary' => 80000]);
+        $new = $employee->salaries()->create(['effective_from' => today()->subMonth(), 'basic_salary' => 100000, 'allowances' => 0, 'deductions' => 0, 'net_salary' => 100000]);
+        $employee->update(['basic_salary' => 100000]);
+
+        Setting::put('access.accounts', implode(',', [...\App\Support\Access::DEFAULTS['accounts'], 'employees.salary']));
+        $this->actingAs($this->accounts)->delete(route('salaries.destroy', $new))->assertForbidden();
+        $this->asGuest();
+
+        $this->actingAs($this->admin)->get("/employees/{$employee->id}?tab=salary")->assertSee(route('salaries.destroy', $new), false);
+        $this->delete(route('salaries.destroy', $new))->assertRedirect(route('employees.show', [$employee, 'tab' => 'salary']));
+        $this->assertModelMissing($new);
+        // Current salary falls back to the revision still in effect.
+        $this->assertEquals(80000, (float) $employee->fresh()->basic_salary);
+        $this->assertDatabaseHas('activity_logs', ['action' => 'salary_revision_deleted', 'user_id' => $this->admin->id]);
+        $this->assertModelExists($old);
+    }
+
     public function test_super_admin_changes_an_employee_password(): void
     {
         $page = $this->actingAs($this->admin)->get("/employees/{$this->staff->employee_id}")->assertOk();

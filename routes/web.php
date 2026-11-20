@@ -164,6 +164,7 @@ Route::middleware('auth')->group(function () {
     });
     Route::post('/impersonation/end', [EmployeeLoginController::class, 'end'])->name('impersonation.end');
     Route::post('/employees/{employee}/salaries', [EmployeeSalaryController::class, 'store'])->name('salaries.store')->middleware('can:employees.salary');
+    Route::delete('/salaries/{salary}', [EmployeeSalaryController::class, 'destroy'])->name('salaries.destroy')->middleware('can:employees.salary');
 
     /*
     | M9 Site rotation
