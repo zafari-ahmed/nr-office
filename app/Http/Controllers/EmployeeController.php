@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Employee;
 use App\Models\User;
 use App\Support\Activity;
+use App\Support\EmployeePhoto;
 use App\Support\Numbering;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -116,9 +117,18 @@ class EmployeeController extends Controller
 
     public function photo(Employee $employee)
     {
-        abort_unless($employee->photo_path && Storage::disk('public')->exists($employee->photo_path), 404);
+        $disk = Storage::disk('public');
+        abort_unless($employee->photo_path && $disk->exists($employee->photo_path), 404);
 
-        return Storage::disk('public')->response($employee->photo_path, null, ['Cache-Control' => 'private, max-age=31536000']);
+        // A small copy instead of the full upload. The URL changes with each new photo (?v=), so the
+        // browser keeps it for a year without asking again; ETag/Last-Modified answer any re-check with a 304.
+        $response = response()->file($disk->path(EmployeePhoto::servePath($employee->photo_path)), [
+            'Cache-Control' => 'private, max-age=31536000, immutable',
+        ]);
+        $response->setAutoEtag()->setAutoLastModified();
+        $response->isNotModified(request());
+
+        return $response;
     }
 
     /** Upload or replace the photo straight from the profile page. */
@@ -155,14 +165,14 @@ class EmployeeController extends Controller
     {
         if ($request->hasFile('photo')) {
             $this->deletePhoto($employee);
-            $employee->update(['photo_path' => $request->file('photo')->store('employees/photos', 'public')]);
+            $employee->update(['photo_path' => EmployeePhoto::store($request->file('photo'))]);
         }
     }
 
     private function deletePhoto(Employee $employee): void
     {
         if ($employee->photo_path) {
-            Storage::disk('public')->delete($employee->photo_path);
+            EmployeePhoto::delete($employee->photo_path);
             $employee->update(['photo_path' => null]);
         }
     }

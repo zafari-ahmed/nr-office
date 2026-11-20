@@ -253,18 +253,32 @@ class WorkflowTest extends TestCase
     public function test_employee_photo_can_be_uploaded_changed_and_removed(): void
     {
         \Illuminate\Support\Facades\Storage::fake('public');
-        $file = fn () => \Illuminate\Http\UploadedFile::fake()->image('me.jpg', 200, 200);
+        $file = fn () => \Illuminate\Http\UploadedFile::fake()->image('me.jpg', 900, 600);
 
         $this->post('/employees', ['full_name' => 'Ahmed Raza', 'employment_type' => 'permanent', 'status' => 'active', 'photo' => $file()])->assertRedirect();
         $emp = Employee::first();
         $first = $emp->photo_path;
         \Illuminate\Support\Facades\Storage::disk('public')->assertExists($first);
+
+        // Pages get a small square copy, cached by the browser and answered with 304 on a re-check.
+        $thumb = \App\Support\EmployeePhoto::thumbPath($first);
+        \Illuminate\Support\Facades\Storage::disk('public')->assertExists($thumb);
+        $res = $this->get($emp->photoUrl())->assertOk();
+        $this->assertStringContainsString('max-age=31536000', $res->headers->get('Cache-Control'));
+        $this->assertSame(realpath(\Illuminate\Support\Facades\Storage::disk('public')->path($thumb)), $res->baseResponse->getFile()->getRealPath());
+        $this->get($emp->photoUrl(), ['If-None-Match' => $res->headers->get('ETag')])->assertStatus(304);
+
+        // A photo uploaded before small copies existed gets one on first view.
+        \Illuminate\Support\Facades\Storage::disk('public')->delete($thumb);
         $this->get($emp->photoUrl())->assertOk();
+        \Illuminate\Support\Facades\Storage::disk('public')->assertExists($thumb);
+        $this->assertLessThanOrEqual(\App\Support\EmployeePhoto::SIZE, getimagesize(\Illuminate\Support\Facades\Storage::disk('public')->path($thumb))[0]);
 
         // Replace from the profile page; the old file is removed.
         $this->post("/employees/{$emp->id}/photo", ['photo' => $file()])->assertSessionHasNoErrors();
-        \Illuminate\Support\Facades\Storage::disk('public')->assertMissing($first);
+        \Illuminate\Support\Facades\Storage::disk('public')->assertMissing([$first, $thumb]);
         $this->assertNotNull($emp->fresh()->photo_path);
+        $this->assertNotSame($emp->photoUrl(), $emp->fresh()->photoUrl());
 
         $this->post("/employees/{$emp->id}/photo", ['photo' => \Illuminate\Http\UploadedFile::fake()->create('cv.pdf', 10, 'application/pdf')])->assertSessionHasErrors('photo');
 

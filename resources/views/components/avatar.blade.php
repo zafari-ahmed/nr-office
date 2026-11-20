@@ -6,7 +6,7 @@
 @endphp
 <span {{ $attributes->merge(['class' => 'avatar '.$size]) }} title="{{ $name }}" style="background: oklch(0.66 0.09 {{ $hue }} / 0.2); color: oklch(0.55 0.11 {{ $hue }})">
     @if ($src)
-        <img src="{{ $src }}" alt="{{ $name }}" class="size-full object-cover">
+        <img src="{{ $src }}" alt="{{ $name }}" class="size-full object-cover" loading="lazy" decoding="async">
     @else
         {{ $initials }}
     @endif

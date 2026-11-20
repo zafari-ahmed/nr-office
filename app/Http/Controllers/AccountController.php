@@ -3,8 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Support\EmployeePhoto;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
 
@@ -47,10 +47,8 @@ class AccountController extends Controller
         if ($employee = $user->employee) {
             $employee->update(collect($data)->only('phone', 'address', 'emergency_contact_name', 'emergency_contact_phone')->all());
             if ($request->hasFile('photo')) {
-                if ($employee->photo_path) {
-                    Storage::disk('public')->delete($employee->photo_path);
-                }
-                $employee->update(['photo_path' => $request->file('photo')->store('employees/photos', 'public')]);
+                EmployeePhoto::delete($employee->photo_path);
+                $employee->update(['photo_path' => EmployeePhoto::store($request->file('photo'))]);
             }
         }
 

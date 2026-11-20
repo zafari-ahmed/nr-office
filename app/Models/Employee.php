@@ -95,8 +95,9 @@ class Employee extends Model
 
     public function photoUrl(): ?string
     {
-        // Served through the app so photos work without `php artisan storage:link`; ?v= busts the cache after a change.
-        return $this->photo_path ? route('employees.photo', [$this, 'v' => $this->updated_at?->timestamp]) : null;
+        // Served through the app so photos work without `php artisan storage:link`. ?v= follows the photo file
+        // itself (each upload gets a new name), so the browser cache only resets when the photo really changes.
+        return $this->photo_path ? route('employees.photo', [$this, 'v' => substr(md5($this->photo_path), 0, 10)]) : null;
     }
 
     public function scopeActive($query)
